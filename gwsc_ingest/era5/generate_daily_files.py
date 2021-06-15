@@ -4,6 +4,8 @@ import sys
 
 import xarray as xr
 
+from gwsc_ingest.utils.logging import setup_basic_logging
+
 log = logging.getLogger(__name__)
 
 
@@ -46,14 +48,15 @@ def generate_daily_files(in_filename, out_filename):
         sum_tp_mm.attrs['units'] = 'mm'
         log.debug(f'\n----------Total Precipitation @ Surface ----------\n{sum_tp_mm}')
 
+        # Create new Dataset with all summary variables
         out_ds = xr.Dataset({
             'mean_t2m_c': mean_t2m_c,
             'max_t2m_c': max_t2m_c,
             'min_t2m_c': min_t2m_c,
             'sum_tp_mm': sum_tp_mm
         })
-
         log.debug(out_ds)
+
         # Write out to netcdf file
         if os.path.isdir(out_filename):
             # Automatically generate out filename with date
@@ -66,11 +69,7 @@ def generate_daily_files(in_filename, out_filename):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s::%(levelname)s::%(module)s::%(lineno)d::%(message)s',
-        datefmt='%Y-%m-%d %I:%M:%S'
-    )
+    setup_basic_logging()
     args = sys.argv[1:]
     log.debug(args)
     generate_daily_files(*args)
