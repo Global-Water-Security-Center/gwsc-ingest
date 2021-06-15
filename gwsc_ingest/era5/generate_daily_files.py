@@ -69,7 +69,7 @@ def generate_daily_files(in_filename, out_filename):
 
 
 if __name__ == '__main__':
-    setup_basic_logging()
+    setup_basic_logging(logging.DEBUG)
     args = sys.argv[1:]
     log.debug(args)
     generate_daily_files(*args)

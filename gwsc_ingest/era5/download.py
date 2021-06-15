@@ -1,12 +1,44 @@
 import datetime as dt
 import logging
+import multiprocessing as mp
 from pathlib import Path
 
 import cdsapi
+import humanize
 
 from gwsc_ingest.utils.logging import setup_basic_logging
 
 log = logging.getLogger(__name__)
+
+
+def bulk_download_one_day_ran_sfc(days, download_dir, download_format='netcdf', processes=1):
+    """
+    Downloads multiple 24 hour reanalysis-era5-single-levels (ran-sfc) datasets,
+        one for each day in the given date range.
+
+    Args:
+        days (list<datetime.datetime>): Days to download as a list of datetime object with year, month, and day defined.
+        download_dir (path): Path to directory where data will be downloaded to.
+        download_format (str): Format data will be downloaded as: one of "netcdf" or "grib". Defaults to "netcdf".
+    """
+    # Save current time for timing
+    start_time = dt.datetime.utcnow()
+
+    # Build task arguments
+    tasks = []
+    for day in days:
+        if not isinstance(day, dt.datetime):
+            log.warning(f'Invalid day given: {day}. Must be a datetime.datetime object. Skipping...')
+        tasks.append((day, download_dir, download_format))
+
+    # Execute
+    with mp.Pool(processes=processes) as p:
+        # This will block until finished
+        p.starmap(download_one_day_ran_sfc, tasks)
+
+    # Report time taken
+    time_to_download = dt.datetime.utcnow() - start_time
+    log.info(f'All downloads completed in {humanize.precisedelta(time_to_download)}')
 
 
 def download_one_day_ran_sfc(day, download_dir, download_format='netcdf'):
@@ -16,7 +48,7 @@ def download_one_day_ran_sfc(day, download_dir, download_format='netcdf'):
     Args:
         day (datetime.datetime): Day to download. Datetime object with year, month, and day defined.
         download_dir (path): Path to directory where data will be downloaded to.
-        download_format (str): Format data will be downloaded as. One of "netcdf" or "grib". Defaults to "netcdf".
+        download_format (str): Format data will be downloaded as: one of "netcdf" or "grib". Defaults to "netcdf".
     """
     # Validate input
     if not isinstance(day, dt.datetime):
@@ -44,6 +76,9 @@ def download_one_day_ran_sfc(day, download_dir, download_format='netcdf'):
     out_filename = f'reanalysis-era5-single-levels-24-hours-{day:%Y-%m-%d}.{out_file_ext}'
     out_path = download_dir / out_filename
 
+    # Get start time for timing
+    start_time = dt.datetime.utcnow()
+
     # Submit the download request using the CDS Python API
     cds = cdsapi.Client()
     r = cds.retrieve(
@@ -69,10 +104,17 @@ def download_one_day_ran_sfc(day, download_dir, download_format='netcdf'):
     )
     log.debug(r)
 
+    time_to_download = dt.datetime.utcnow() - start_time
+    log.info(f'Downloaded file: {out_path}')
+    log.info(f'Download completed in {humanize.precisedelta(time_to_download)}')
+
 
 if __name__ == '__main__':
     setup_basic_logging(logging.INFO)
-    download_one_day_ran_sfc(
-        day=dt.datetime(year=2021, month=6, day=5),
-        download_dir='/home/gwscdev/aquadev/era5/daily_hourly'
+    start_day = dt.datetime(year=2021, month=5, day=21)
+    days = [start_day - dt.timedelta(days=x) for x in range(100)]
+    bulk_download_one_day_ran_sfc(
+        days=days,
+        download_dir='/home/gwscdev/aquadev/era5/daily_hourly',
+        processes=4
     )

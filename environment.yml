@@ -5,6 +5,7 @@ dependencies:
   - cdsapi
   - cfgrib
   - h5netcdf
+  - humanize
   - netcdf4
   - pip
   - xarray
