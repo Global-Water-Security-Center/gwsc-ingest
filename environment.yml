@@ -1,0 +1,9 @@
+name: gwsc_injest
+channels:
+  - conda-forge
+dependencies:
+  - pip
+  - xarray
+  - cfgrib
+  - h5netcdf
+  - netcdf4
