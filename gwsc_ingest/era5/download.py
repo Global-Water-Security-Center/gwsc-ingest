@@ -111,8 +111,8 @@ def download_one_day_ran_sfc(day, download_dir, download_format='netcdf'):
 
 if __name__ == '__main__':
     setup_basic_logging(logging.INFO)
-    start_day = dt.datetime(year=2021, month=5, day=21)
-    days = [start_day - dt.timedelta(days=x) for x in range(100)]
+    start_day = dt.datetime(year=2021, month=2, day=10)
+    days = [start_day - dt.timedelta(days=x) for x in range(250)]
     bulk_download_one_day_ran_sfc(
         days=days,
         download_dir='/home/gwscdev/aquadev/era5/daily_hourly',
