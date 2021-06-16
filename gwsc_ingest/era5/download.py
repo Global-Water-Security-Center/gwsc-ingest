@@ -1,12 +1,12 @@
 import datetime as dt
 import logging
 import multiprocessing as mp
-from pathlib import Path
 
 import cdsapi
 import humanize
 
 from gwsc_ingest.utils.logging import setup_basic_logging
+from gwsc_ingest.utils.validation import validate_directory
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +20,13 @@ def bulk_download_one_day_ran_sfc(days, download_dir, download_format='netcdf', 
         days (list<datetime.datetime>): Days to download as a list of datetime object with year, month, and day defined.
         download_dir (path): Path to directory where data will be downloaded to.
         download_format (str): Format data will be downloaded as: one of "netcdf" or "grib". Defaults to "netcdf".
+        processes (int): Number of concurrent processes to use to download the data.
     """
+    # Validate input
+    if processes < 1:
+        log.warning('"processes" should not be negative. Using to 1 process.')
+        processes = 1
+
     # Save current time for timing
     start_time = dt.datetime.utcnow()
 
@@ -54,13 +60,7 @@ def download_one_day_ran_sfc(day, download_dir, download_format='netcdf'):
     if not isinstance(day, dt.datetime):
         raise ValueError('"day" must be a datetime.datetime object.')
 
-    if isinstance(download_dir, str):
-        download_dir = Path(download_dir)
-    elif not isinstance(download_dir, Path):
-        raise ValueError('"download_dir" must be a string or pathlib.Path object.')
-
-    if not download_dir.is_dir():
-        raise ValueError('"download_dir" must be a path to an existing directory. No such directory found: ')
+    download_dir = validate_directory(download_dir, 'download_dir')
 
     if download_format not in ['netcdf', 'grib']:
         raise ValueError('"download_format" must be one of "netcdf" or "grib".')
@@ -110,11 +110,28 @@ def download_one_day_ran_sfc(day, download_dir, download_format='netcdf'):
 
 
 if __name__ == '__main__':
+    import argparse
+
+    from gwsc_ingest.utils.validation import validate_date_string
+
+    parser = argparse.ArgumentParser(description="Downloads multiple 24 hour reanalysis-era5-single-levels "
+                                                 "(ran-sfc) datasets, one for each day in the given date "
+                                                 "range.")
+    parser.add_argument("last_day", type=validate_date_string,
+                        help="The last day of data to download in YYYY-MM-DD format.")
+    parser.add_argument("num_days", type=int,
+                        help="Number of days before last_day to retrieve.")
+    parser.add_argument("download_dir",
+                        help="Path to directory where data will be downloaded to.")
+    parser.add_argument("-p" "--processes", dest="processes", type=int, required=False, default=1,
+                        help="Number of concurrent processes to use to download the files.")
+    args = parser.parse_args()
+
     setup_basic_logging(logging.INFO)
-    start_day = dt.datetime(year=2021, month=2, day=10)
-    days = [start_day - dt.timedelta(days=x) for x in range(250)]
+    last_day = args.last_day
+    days = [last_day - dt.timedelta(days=x) for x in range(args.num_days)]
     bulk_download_one_day_ran_sfc(
         days=days,
-        download_dir='/home/gwscdev/aquadev/era5/daily_hourly',
-        processes=4
+        download_dir=args.download_dir,
+        processes=args.processes
     )
