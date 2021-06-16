@@ -128,6 +128,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     setup_basic_logging(logging.INFO)
+    log.debug(f'Given arguments: {args}')
     last_day = args.last_day
     days = [last_day - dt.timedelta(days=x) for x in range(args.num_days)]
     bulk_download_one_day_ran_sfc(
