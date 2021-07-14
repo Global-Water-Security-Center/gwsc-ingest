@@ -1,4 +1,4 @@
-name: gwsc_injest
+name: gwsc_ingest
 channels:
   - conda-forge
 dependencies:

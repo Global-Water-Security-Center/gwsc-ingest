@@ -11,7 +11,7 @@ from gwsc_ingest.utils.validation import validate_directory
 log = logging.getLogger(__name__)
 
 
-def bulk_download_one_day_ran_sfc(days, download_dir, download_format='netcdf', processes=1):
+def bulk_download_one_day_ran_sfc(days, download_dir, download_format='netcdf', processes=1, api_key=None):
     """
     Downloads multiple 24 hour reanalysis-era5-single-levels (ran-sfc) datasets,
         one for each day in the given date range.
@@ -21,6 +21,7 @@ def bulk_download_one_day_ran_sfc(days, download_dir, download_format='netcdf', 
         download_dir (path): Path to directory where data will be downloaded to.
         download_format (str): Format data will be downloaded as: one of "netcdf" or "grib". Defaults to "netcdf".
         processes (int): Number of concurrent processes to use to download the data.
+        api_key (str): CDS API Key. Attempts to read from ~/.cdsapirc file if not provided.
     """
     # Validate input
     if processes < 1:
@@ -35,7 +36,7 @@ def bulk_download_one_day_ran_sfc(days, download_dir, download_format='netcdf', 
     for day in days:
         if not isinstance(day, dt.datetime):
             log.warning(f'Invalid day given: {day}. Must be a datetime.datetime object. Skipping...')
-        tasks.append((day, download_dir, download_format))
+        tasks.append((day, download_dir, download_format, api_key))
 
     # Execute
     with mp.Pool(processes=processes) as p:
@@ -47,7 +48,7 @@ def bulk_download_one_day_ran_sfc(days, download_dir, download_format='netcdf', 
     log.info(f'All downloads completed in {humanize.precisedelta(time_to_download)}')
 
 
-def download_one_day_ran_sfc(day, download_dir, download_format='netcdf'):
+def download_one_day_ran_sfc(day, download_dir, download_format='netcdf', api_key=None):
     """
     Downloads 24 hours of the reanalysis-era5-single-levels (ran-sfc) data for the given day.
 
@@ -80,7 +81,13 @@ def download_one_day_ran_sfc(day, download_dir, download_format='netcdf'):
     start_time = dt.datetime.utcnow()
 
     # Submit the download request using the CDS Python API
-    cds = cdsapi.Client()
+    if api_key is None:
+        cds = cdsapi.Client()
+    else:
+        cds = cdsapi.Client(
+            url='https://cds.climate.copernicus.eu/api/v2',
+            key=api_key,
+        )
     r = cds.retrieve(
         'reanalysis-era5-single-levels',
         {
@@ -125,6 +132,8 @@ if __name__ == '__main__':
                         help="Path to directory where data will be downloaded to.")
     parser.add_argument("-p" "--processes", dest="processes", type=int, required=False, default=1,
                         help="Number of concurrent processes to use to download the files.")
+    parser.add_argument("-k" "--key", dest="key", type=str, required=False, default=None,
+                        help="CDS API Key")
     args = parser.parse_args()
 
     setup_basic_logging(logging.INFO)
@@ -134,5 +143,6 @@ if __name__ == '__main__':
     bulk_download_one_day_ran_sfc(
         days=days,
         download_dir=args.download_dir,
-        processes=args.processes
+        processes=args.processes,
+        api_key=args.key,
     )
