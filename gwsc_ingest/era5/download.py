@@ -88,8 +88,14 @@ def download_one_day_ran_sfc(day, download_dir, download_format='netcdf', api_ke
             url='https://cds.climate.copernicus.eu/api/v2',
             key=api_key,
         )
+
+    if day > dt.datetime(1978, 12, 31):
+        dataset_name = 'reanalysis-era5-single-levels'
+    else:
+        dataset_name = 'reanalysis-era5-single-levels-preliminary-back-extension'
+
     r = cds.retrieve(
-        'reanalysis-era5-single-levels',
+        dataset_name,
         {
             'product_type': 'reanalysis',
             'variable': [
