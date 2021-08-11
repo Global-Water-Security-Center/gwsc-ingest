@@ -65,6 +65,21 @@ def generate_summary_files(in_filename, out_filename):
     """
     log.info(f'Processing file: {in_filename}')
 
+    # Derive out filename
+    if os.path.isdir(out_filename):
+        # Automatically generate out filename with date
+        file_date = dt.datetime.strptime(
+            os.path.basename(in_filename),
+            'reanalysis-era5-single-levels-24-hours-%Y-%m-%d.nc'
+        )
+        log.debug(file_date)
+        out_filename = os.path.join(out_filename, f'reanalysis-era5-sfc-daily-{file_date:%Y-%m-%d}.nc')
+        log.info(f'Writing results to: {out_filename} ...')
+
+    if os.path.isfile(out_filename):
+        log.warning(f'A summary file with name "{out_filename}" already exists. Skipping...')
+        return
+
     # Open file
     with xr.load_dataset(in_filename) as ds:
         # Convert temperature from K to C
@@ -109,14 +124,6 @@ def generate_summary_files(in_filename, out_filename):
             'sum_tp_mm': sum_tp_mm
         })
         log.debug(out_ds)
-
-        # Write out to netcdf file
-        if os.path.isdir(out_filename):
-            # Automatically generate out filename with date
-            file_date = ds.time[0].dt.strftime('%Y-%m-%d').item()
-            log.debug(file_date)
-            out_filename = os.path.join(out_filename, f'reanalysis-era5-sfc-daily-{file_date}.nc')
-            log.info(f'Writing results to: {out_filename} ...')
 
         out_ds.to_netcdf(out_filename)
 
