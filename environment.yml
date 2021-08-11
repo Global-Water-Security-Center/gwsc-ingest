@@ -8,4 +8,5 @@ dependencies:
   - humanize
   - netcdf4
   - pip
+  - tqdm
   - xarray

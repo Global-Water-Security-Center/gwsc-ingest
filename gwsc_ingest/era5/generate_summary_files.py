@@ -4,6 +4,7 @@ import multiprocessing as mp
 import os.path
 
 import humanize
+from tqdm import tqdm
 import xarray as xr
 
 from gwsc_ingest.utils.logging import setup_basic_logging
@@ -33,7 +34,10 @@ def bulk_generate_summary_files(in_directory, out_directory, processes=1):
     tasks = []
     for item in in_directory.iterdir():
         if item.is_file() and 'nc' in item.suffix:
-            tasks.append((str(item), str(out_directory)))
+            tasks.append({
+                'in_filename': str(item),
+                'out_filename': str(out_directory)}
+            )
 
     log.debug(tasks)
     log.debug(len(tasks))
@@ -41,12 +45,26 @@ def bulk_generate_summary_files(in_directory, out_directory, processes=1):
     # Execute
     with mp.Pool(processes=processes) as p:
         # This will block until finished
-        p.starmap(generate_summary_files, tasks)
+        for _ in tqdm(p.imap_unordered(generate_summary_files_worker, tasks), total=len(tasks)):
+            pass
 
     # Report time taken
     time_to_download = dt.datetime.utcnow() - start_time
     log.info(f'Processed {len(tasks)} files in {humanize.precisedelta(time_to_download)} '
              f'using {processes} processes.')
+
+
+def generate_summary_files_worker(gsfw_kwargs):
+    """
+    Worker function that parses out give kwargs (dict) and calls generate_summary_files with them.
+
+    Args:
+        gsfw_kwargs (dict): Keyword arguments of generate_summary_files.
+    """
+    generate_summary_files(
+        in_filename=gsfw_kwargs.get('in_filename'),
+        out_filename=gsfw_kwargs.get('out_filename'),
+    )
 
 
 def generate_summary_files(in_filename, out_filename):
