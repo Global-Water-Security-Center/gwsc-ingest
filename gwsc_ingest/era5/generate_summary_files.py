@@ -4,6 +4,7 @@ import multiprocessing as mp
 import os.path
 
 import humanize
+import numpy as np
 from tqdm import tqdm
 import xarray as xr
 
@@ -40,12 +41,12 @@ def bulk_generate_summary_files(in_directory, out_directory, processes=1):
             )
 
     log.debug(tasks)
-    log.debug(len(tasks))
+    log.debug(f'Num tasks: {len(tasks)}')
 
     # Execute
     with mp.Pool(processes=processes) as p:
         # This will block until finished
-        for _ in tqdm(p.imap_unordered(generate_summary_files_worker, tasks), total=len(tasks)):
+        for _ in tqdm(p.imap_unordered(_worker, tasks), total=len(tasks)):
             pass
 
     # Report time taken
@@ -54,16 +55,16 @@ def bulk_generate_summary_files(in_directory, out_directory, processes=1):
              f'using {processes} processes.')
 
 
-def generate_summary_files_worker(gsfw_kwargs):
+def _worker(qwargs):
     """
-    Worker function that parses out give kwargs (dict) and calls generate_summary_files with them.
+    Worker function that parses out kwargs (dict) and calls generate_summary_files with them.
 
     Args:
-        gsfw_kwargs (dict): Keyword arguments of generate_summary_files.
+        qwargs (dict): Keyword arguments of generate_summary_files.
     """
     generate_summary_files(
-        in_filename=gsfw_kwargs.get('in_filename'),
-        out_filename=gsfw_kwargs.get('out_filename'),
+        in_filename=qwargs.get('in_filename'),
+        out_filename=qwargs.get('out_filename'),
     )
 
 
@@ -84,6 +85,7 @@ def generate_summary_files(in_filename, out_filename):
     log.info(f'Processing file: {in_filename}')
 
     # Derive out filename
+    file_date = None
     if os.path.isdir(out_filename):
         # Automatically generate out filename with date
         file_date = dt.datetime.strptime(
@@ -94,6 +96,7 @@ def generate_summary_files(in_filename, out_filename):
         out_filename = os.path.join(out_filename, f'reanalysis-era5-sfc-daily-{file_date:%Y-%m-%d}.nc')
         log.info(f'Writing results to: {out_filename} ...')
 
+    # Check to see if given filename/generated filename is an existing file
     if os.path.isfile(out_filename):
         log.warning(f'A summary file with name "{out_filename}" already exists. Skipping...')
         return
@@ -114,24 +117,28 @@ def generate_summary_files(in_filename, out_filename):
         mean_t2m_c = ds.t2m_c.mean('time')
         mean_t2m_c.attrs['long_name'] = 'Mean ' + ds.t2m_c.long_name
         mean_t2m_c.attrs['units'] = 'C'
+        mean_t2m_c = add_time_dimension(mean_t2m_c, file_date)
         log.debug(f'\n----------Mean Temperature @ 2 Meters----------\n{mean_t2m_c}')
 
         # Compute minimum temperature
         min_t2m_c = ds.t2m_c.min('time')
         min_t2m_c.attrs['long_name'] = 'Minimum ' + ds.t2m_c.long_name
         min_t2m_c.attrs['units'] = 'C'
+        min_t2m_c = add_time_dimension(min_t2m_c, file_date)
         log.debug(f'\n----------Min. Temperature @ 2 Meters----------\n{min_t2m_c}')
 
         # Compute maximum temperature
         max_t2m_c = ds.t2m_c.max('time')
         max_t2m_c.attrs['long_name'] = 'Maximum ' + ds.t2m_c.long_name
         max_t2m_c.attrs['units'] = 'C'
+        max_t2m_c = add_time_dimension(max_t2m_c, file_date)
         log.debug(f'\n----------Max. Temperature @ 2 Meters----------\n{max_t2m_c}')
 
         # Compute total precipitation
         sum_tp_mm = ds.tp_mm.sum('time')
         sum_tp_mm.attrs['long_name'] = ds.tp_mm.long_name
         sum_tp_mm.attrs['units'] = 'mm'
+        sum_tp_mm = add_time_dimension(sum_tp_mm, file_date)
         log.debug(f'\n----------Sum of Total Precipitation @ Surface ----------\n{sum_tp_mm}')
 
         # Create new Dataset with all summary variables
@@ -144,6 +151,29 @@ def generate_summary_files(in_filename, out_filename):
         log.debug(out_ds)
 
         out_ds.to_netcdf(out_filename)
+
+
+def add_time_dimension(data_array, time):
+    """
+    Creates a new xr.DataArray with a time dimension with a single time.
+
+    Args:
+        data_array (xr.DataArray): A 2D xr.DataArray with latitude and longitude coordinates.
+        time (datetime): A single datetime object.
+
+    Returns:
+        xr.DataArray: The new array with the time dimension added.
+    """
+    data_array = xr.DataArray(
+        np.array([data_array.data.copy()]),
+        coords=[
+            ("time", np.array([time])),
+            ('latitude', data_array.latitude.data.copy()),
+            ('longitude', data_array.longitude.data.copy())
+        ],
+        attrs=data_array.attrs,
+    )
+    return data_array
 
 
 if __name__ == '__main__':
