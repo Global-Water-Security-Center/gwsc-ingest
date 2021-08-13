@@ -4,9 +4,12 @@ channels:
 dependencies:
   - cdsapi
   - cfgrib
+  - dask
   - h5netcdf
   - humanize
   - netcdf4
   - pip
+  - rechunker
   - tqdm
   - xarray
+  - zarr
