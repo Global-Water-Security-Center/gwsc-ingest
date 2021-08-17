@@ -79,9 +79,10 @@ def netcdf_to_zarr(in_directory, out_zarr, size_per_chunk=1.049e8):
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(description="Process a directory of ERA5 NetCDF daily summary files, each "
-                                                 "containing  a single day of data for the following variables: "
-                                                 "min_t2m_c, mean_t2m_c, max_t2m_c, and sum_tp_mm.")
+    parser = argparse.ArgumentParser(description="Convert a directory of ERA5 NetCDF daily summary files into a "
+                                                 "single zarr dataset. Each file should contain a single day of "
+                                                 "data for the following variables: min_t2m_c, mean_t2m_c, "
+                                                 "max_t2m_c, and sum_tp_mm.")
     parser.add_argument("in_directory",
                         help="Path to directory containing ERA5 NetCDF daily summary files "
                              "(e.g.: '/data/pnt_daily_1950_2021_w_time').")
