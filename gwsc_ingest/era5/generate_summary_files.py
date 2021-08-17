@@ -188,7 +188,11 @@ if __name__ == '__main__':
     parser.add_argument("-p" "--processes", dest="processes", type=int, required=False, default=1,
                         help="Number of concurrent processes to use to process the files.")
 
+    parser.add_argument("-d" "--debug", dest="debug", action='store_true',
+                        help="Turn on debug logging.")
+
     args = parser.parse_args()
-    setup_basic_logging(logging.INFO)
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    setup_basic_logging(log_level)
     log.debug(f'Given arguments: {args}')
     bulk_generate_summary_files(args.in_directory, args.out_directory, args.processes)

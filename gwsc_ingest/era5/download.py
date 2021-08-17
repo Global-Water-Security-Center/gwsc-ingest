@@ -140,9 +140,12 @@ if __name__ == '__main__':
                         help="Number of concurrent processes to use to download the files.")
     parser.add_argument("-k" "--key", dest="key", type=str, required=False, default=None,
                         help="CDS API Key")
-    args = parser.parse_args()
+    parser.add_argument("-d" "--debug", dest="debug", action='store_true',
+                        help="Turn on debug logging.")
 
-    setup_basic_logging(logging.INFO)
+    args = parser.parse_args()
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    setup_basic_logging(log_level)
     log.debug(f'Given arguments: {args}')
     last_day = args.last_day
     days = [last_day - dt.timedelta(days=x) for x in range(args.num_days)]

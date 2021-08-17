@@ -1,3 +1,4 @@
+import argparse
 import logging
 import math
 from pathlib import Path
@@ -14,12 +15,14 @@ log = logging.getLogger(__name__)
 
 def netcdf_to_zarr(in_directory, out_zarr, size_per_chunk=1.049e8):
     """
-    Combine many netcdf files into one xarray-style zarr dataset.
+    Process a directory of ERA5 NetCDF daily summary files, each containing
+        a single day of data for the following variables: min_t2m_c, mean_t2m_c,
+        max_t2m_c, and sum_tp_mm.
 
     Args:
-        in_directory:
-        out_zarr:
-        size_per_chunk (int): target size per chunk. Defaults to 100 MB (1.049e8).
+        in_directory (str): Path to directory containing ERA5 NetCDF daily summary files.
+        out_zarr (str): Path to zarr directory where zarr data will be written to.
+        size_per_chunk (int): Target size per chunk in bytes. Defaults to 100 MB (1.049e8).
     """
     in_directory = validate_directory(in_directory)
     log.info('Identifying files...')
@@ -74,7 +77,28 @@ def netcdf_to_zarr(in_directory, out_zarr, size_per_chunk=1.049e8):
 
 
 if __name__ == '__main__':
-    in_dir = Path(r'E:\ERA5\pnt_daily_1950_2021_w_time')
-    out_zarr = r'E:\ERA5\testing\era5_pnt_daily_1950_2021.zarr'
-    setup_basic_logging(logging.INFO)
-    netcdf_to_zarr(in_dir, out_zarr)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Process a directory of ERA5 NetCDF daily summary files, each "
+                                                 "containing  a single day of data for the following variables: "
+                                                 "min_t2m_c, mean_t2m_c, max_t2m_c, and sum_tp_mm.")
+    parser.add_argument("in_directory",
+                        help="Path to directory containing ERA5 NetCDF daily summary files "
+                             "(e.g.: '/data/pnt_daily_1950_2021_w_time').")
+    parser.add_argument("out_zarr",
+                        help="Path to zarr directory where zarr data will be written to "
+                             "(e.g.: '/data/pnt_daily_1950_2021.zarr').")
+    parser.add_argument("-s" "--size_per_chunk", dest="size_per_chunk", type=int, required=False, default=1.049e8,
+                        help="Target size per chunk in bytes. Defaults to 100 MB (1.049e8).")
+    parser.add_argument("-d" "--debug", dest="debug", action='store_true',
+                        help="Turn on debug logging.")
+
+    args = parser.parse_args()
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    setup_basic_logging(log_level)
+    log.debug(f'Given arguments: {args}')
+    netcdf_to_zarr(
+        in_directory=args.in_directory,
+        out_zarr=args.out_zarr,
+        size_per_chunk=args.size_per_chunk
+    )
