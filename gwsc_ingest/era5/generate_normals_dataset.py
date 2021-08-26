@@ -37,7 +37,7 @@ def _compute_doy_mean(qwargs):
     group_da = da.isel({'time': doy_indices})
     mean_da = group_da.mean('time').compute()
 
-    log.debug(f'Computation for var {variable} doy {doy} took: '
+    log.debug(f'Computation for var {variable} DOY {doy} took: '
               f'{humanize.naturaldelta(dt.datetime.utcnow() - comp_start_time)}')
 
     # Coords
@@ -89,55 +89,48 @@ def generate_normals_dataset(in_zarr, out_netcdf, variables=None):
         doy_groups = template_da.groupby("time.dayofyear").groups
 
         for doy, doy_indices in tqdm(doy_groups.items()):
-            with mp.Pool(processes=len(variables)) as pool:
-                tasks = []
-                for variable in variables:
-                    tasks.append({
-                        'variable': variable,
-                        'da': ds[variable],
-                        'doy': doy,
-                        'doy_indices': doy_indices,
-                    })
+            tasks = []
+            for variable in variables:
+                tasks.append({
+                    'variable': variable,
+                    'da': ds[variable],
+                    'doy': doy,
+                    'doy_indices': doy_indices,
+                })
 
-                comp_start_time = dt.datetime.utcnow()
+            comp_start_time = dt.datetime.utcnow()
+            data_vars = dict()
+            with mp.Pool(processes=len(variables)) as pool:
                 # Compute mean for the current doy for all variables in parallel
-                data_vars = dict()
                 for r in pool.imap_unordered(_compute_doy_mean, tasks):
                     data_vars.update({r.attrs['long_name']: r})
 
-                log.info(f'Computation for doy {doy} took '
+                log.info(f'DOY Mean Computation for DOY {doy} took '
                          f'{humanize.naturaldelta(dt.datetime.utcnow() - comp_start_time)}')
 
-                # Prepare a dataset for writing
-                out_ds = xr.Dataset(
-                    data_vars=data_vars,
-                    coords={
-                        'doy': np.array([doy]),
-                        'latitude': lats,
-                        'longitude': lons,
-                    },
-                )
-                out_ds.chunk(chunks={'doy': 1, 'latitude': len(lats), 'longitude': len(lons)})
-
-                if out_zarr.is_dir():
-                    out_ds.to_zarr(out_zarr, mode='a', append_dim='doy', consolidated=True)
-                else:
-                    out_ds.to_zarr(out_zarr, mode='w', consolidated=True)
-
-    log.info(f'Writing day-of-year dataset to single netcdf: {out_ds}')
-    netcdf_write_start = dt.datetime.utcnow()
-    with xr.open_zarr(out_zarr) as out_zarr_ds:
-        log.debug(f'Out Zarr DS:\n{out_zarr_ds}')
-        out_zarr_ds.to_netcdf(out_netcdf)
-    log.info(f'Writing day-of-year dataset to netcdf took '
-             f'{humanize.naturaldelta(dt.datetime.utcnow() - netcdf_write_start)}')
+            # Prepare a dataset for writing
+            out_ds = xr.Dataset(
+                data_vars=data_vars,
+                coords={
+                    'doy': np.array([doy]),
+                    'latitude': lats,
+                    'longitude': lons,
+                },
+            )
+            out_ds = out_ds.chunk(chunks={'doy': 1, 'latitude': len(lats), 'longitude': len(lons)})
+            log.info(f'Out DataSet:\n {out_ds}')
+            out_dir = Path(out_netcdf)
+            out_ds_file = out_dir / f'{variable}_doy_mean_{doy}.nc'
+            log.info(f'Writing Out Dataset to: {out_ds_file}')
+            out_ds.to_netcdf(out_ds_file)
+            log.info(f'Processing complete for {variable}, DOY {doy}.')
 
 
 if __name__ == '__main__':
     in_zarr_path = r'E:\ERA5\era5_pnt_daily_1950_2021_by_time.zarr'
     # in_zarr_path = r'E:\ERA5\era5_pnt_daily_1950_2021.zarr'
-    out_ds_path = r'E:\ERA5\era5_t_doy_mean_1950_2021.nc'
+    out_ds_path = r'E:\ERA5\era5_pnt_doy_mean_1950_2021'
     # vars = ['mean_t2m_c', 'sum_tp_mm']
     vars = ['mean_t2m_c']
-    setup_basic_logging(logging.DEBUG)
+    setup_basic_logging(logging.INFO)
     generate_normals_dataset(in_zarr_path, out_ds_path, vars)
