@@ -31,14 +31,10 @@ def _compute_doy_mean(qwargs):
     da = qwargs.get('da')
     doy = qwargs.get('doy')
     doy_indices = qwargs.get('doy_indices')
-    comp_start_time = dt.datetime.utcnow()
 
     # Trigger mean computation
     group_da = da.isel({'time': doy_indices})
     mean_da = group_da.mean('time').compute()
-
-    log.debug(f'Computation for var {variable} DOY {doy} took: '
-              f'{humanize.naturaldelta(dt.datetime.utcnow() - comp_start_time)}')
 
     # Coords
     doys = np.array([doy])
@@ -50,7 +46,6 @@ def _compute_doy_mean(qwargs):
     mean_variable_name = 'doy_mean_' + variable
     attrs = copy.deepcopy(da.attrs)
     attrs['long_name'] = mean_variable_name
-    log.debug(f'Attributes for {variable}: {attrs}')
 
     mean_da_doy = xr.DataArray(
         np.array([mean_da.data]),
@@ -61,12 +56,12 @@ def _compute_doy_mean(qwargs):
     return mean_da_doy
 
 
-def generate_normals_dataset(in_zarr, out_netcdf, variables=None):
+def generate_normals_dataset(in_zarr, out_dir, variables=None):
     """
     Compute the normal precipitation and temperatures datasets.
     Args:
         in_zarr:
-        out_netcdf:
+        out_dir:
 
     Returns:
 
@@ -98,6 +93,8 @@ def generate_normals_dataset(in_zarr, out_netcdf, variables=None):
                     'doy_indices': doy_indices,
                 })
 
+            log.info(f'\n\n*************************************************************************\n'
+                     f'Computing DOY Mean for DOY {doy}...')
             comp_start_time = dt.datetime.utcnow()
             data_vars = dict()
             with mp.Pool(processes=len(variables)) as pool:
@@ -105,7 +102,8 @@ def generate_normals_dataset(in_zarr, out_netcdf, variables=None):
                 for r in pool.imap_unordered(_compute_doy_mean, tasks):
                     data_vars.update({r.attrs['long_name']: r})
 
-                log.info(f'DOY Mean Computation for DOY {doy} took '
+                log.info(f'\n\n*************************************************************************\n'
+                         f'DOY Mean Computation for DOY {doy} took '
                          f'{humanize.naturaldelta(dt.datetime.utcnow() - comp_start_time)}')
 
             # Prepare a dataset for writing
@@ -118,8 +116,10 @@ def generate_normals_dataset(in_zarr, out_netcdf, variables=None):
                 },
             )
             out_ds = out_ds.chunk(chunks={'doy': 1, 'latitude': len(lats), 'longitude': len(lons)})
-            log.info(f'Out DataSet:\n {out_ds}')
-            out_dir = Path(out_netcdf)
+            log.info(f'\n\n*************************************************************************\n'
+                     f'Out DataSet:\n'
+                     f'{out_ds}')
+            out_dir = Path(out_dir)
             out_ds_file = out_dir / f'{variable}_doy_mean_{doy}.nc'
             log.info(f'Writing Out Dataset to: {out_ds_file}')
             out_ds.to_netcdf(out_ds_file)
