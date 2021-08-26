@@ -1,3 +1,4 @@
+import datetime as dt
 import logging
 from pathlib import Path
 from pprint import pformat
@@ -12,18 +13,21 @@ from gwsc_ingest.utils.logging import setup_basic_logging
 log = logging.getLogger(__name__)
 
 
-if __name__ == '__main__':
-    setup_basic_logging(logging.DEBUG)
-    in_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021.zarr'
-    out_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021_by_time.zarr'
-    temp_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021_by_time-temp.zarr'
-    max_mem = '500MB'
+def rechunk_for_time(in_zarr, out_zarr, temp_zarr, max_memory):
+    """
 
+    Args:
+        in_zarr:
+        out_zarr:
+        temp_zarr:
+
+    Returns:
+
+    """
     # Clean up
     out_zarr_path = Path(out_zarr)
     if out_zarr_path.is_dir():
         shutil.rmtree(out_zarr_path)
-
     temp_zarr_path = Path(temp_zarr)
     if temp_zarr_path.is_dir():
         shutil.rmtree(temp_zarr_path)
@@ -68,10 +72,28 @@ if __name__ == '__main__':
         array_plan = rechunk(
             source=ds,
             target_chunks=target_chunks,
-            max_mem=max_mem,
+            max_mem=max_memory,
             target_store=out_zarr,
             temp_store=temp_zarr,
         )
 
         log.info('Executing...')
+        start_time = dt.datetime.utcnow()
         array_plan.execute()
+        compute_time = dt.datetime.utcnow() - start_time
+        log.debug(f'Done. Execution took: {humanize.naturaldelta(compute_time)}')
+
+
+if __name__ == '__main__':
+    setup_basic_logging(logging.DEBUG)
+    # in_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021.zarr'
+    # out_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021_by_time.zarr'
+    # temp_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021_by_time-temp.zarr'
+    # max_memory = '500MB'
+
+    rechunk_for_time(
+        in_zarr=in_zarr,
+        out_zarr=out_zarr,
+        temp_zarr=temp_zarr,
+        max_memory=max_memory,
+    )
