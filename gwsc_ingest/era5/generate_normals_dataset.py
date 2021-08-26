@@ -93,8 +93,8 @@ def generate_normals_dataset(in_zarr, out_dir, variables=None):
                     'doy_indices': doy_indices,
                 })
 
-            log.info(f'\n\n*************************************************************************\n'
-                     f'Computing DOY Mean for DOY {doy}...')
+            log.info(f'\nComputing DOY Mean for DOY {doy}...\n'
+                     f'*************************************************************************\n')
             comp_start_time = dt.datetime.utcnow()
             data_vars = dict()
             with mp.Pool(processes=len(variables)) as pool:
@@ -102,9 +102,9 @@ def generate_normals_dataset(in_zarr, out_dir, variables=None):
                 for r in pool.imap_unordered(_compute_doy_mean, tasks):
                     data_vars.update({r.attrs['long_name']: r})
 
-                log.info(f'\n\n*************************************************************************\n'
-                         f'DOY Mean Computation for DOY {doy} took '
-                         f'{humanize.naturaldelta(dt.datetime.utcnow() - comp_start_time)}')
+                log.info(f'\nDOY Mean Computation for DOY {doy} took '
+                         f'{humanize.naturaldelta(dt.datetime.utcnow() - comp_start_time)}\n'
+                         f'*************************************************************************\n')
 
             # Prepare a dataset for writing
             out_ds = xr.Dataset(
@@ -116,9 +116,8 @@ def generate_normals_dataset(in_zarr, out_dir, variables=None):
                 },
             )
             out_ds = out_ds.chunk(chunks={'doy': 1, 'latitude': len(lats), 'longitude': len(lons)})
-            log.info(f'\n\n*************************************************************************\n'
-                     f'Out DataSet:\n'
-                     f'{out_ds}')
+            log.info(f'\nOut DataSet:\n'
+                     f'{out_ds}\n*************************************************************************\n')
             out_dir = Path(out_dir)
             out_ds_file = out_dir / f'{variable}_doy_mean_{doy}.nc'
             log.info(f'Writing Out Dataset to: {out_ds_file}')
