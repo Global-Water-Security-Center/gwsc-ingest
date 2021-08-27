@@ -1,7 +1,6 @@
 import copy
 import datetime as dt
 import logging
-import multiprocessing as mp
 import traceback
 
 import humanize
@@ -56,13 +55,13 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
                 out_nc_file = out_directory / f'{variable}_doy_mean_{doy}_{first_year}_{last_year}.nc'
                 if out_nc_file.is_file():
                     if not overwrite:
-                        log.info(f'Output for doy {doy} found at: {out_nc_file}. Skipping...')
+                        log.info(f'\nOutput for doy {doy} found at: {out_nc_file}. Skipping...')
                         continue
                     else:
                         out_nc_file.unlink(missing_ok=True)
 
                 # Start computation for current DOY
-                log.info(f'Computing DOY Mean for DOY {doy} for variable {variable}...')
+                log.info(f'\nComputing DOY Mean for DOY {doy} for variable {variable}...')
                 comp_start_time = dt.datetime.utcnow()
 
                 # Compute mean for the current doy for all variables in parallel
