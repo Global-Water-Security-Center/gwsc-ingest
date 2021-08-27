@@ -67,7 +67,11 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
                 # Compute mean for the current doy for all variables in parallel
                 result = _compute_doy_mean(variable, ds[variable], doy, doy_indices)
 
-                if not result['success']:
+                if result['success'] is None:
+                    log.info(f'An unexpected error occurred while processing {variable} for DOY {doy}')
+                    failed[variable].append(doy)
+                    continue
+                if result['success'] is False:
                     log.error(f'An error occurred while processing mean for {variable} for DOY {doy}:\n'
                               f'{result["exception"]}\n'
                               f'{result["traceback"]}')
