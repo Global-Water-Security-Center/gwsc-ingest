@@ -73,8 +73,8 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
                     continue
                 if result['success'] is False:
                     log.error(f'An error occurred while processing mean for {variable} for DOY {doy}:\n'
-                              f'{result["exception"]}\n'
-                              f'{result["traceback"]}')
+                              f'{result["result"]["exception"]}\n'
+                              f'{result["result"]["traceback"]}')
                     failed[variable].append(doy)
                     continue
 
