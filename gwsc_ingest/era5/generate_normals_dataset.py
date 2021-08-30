@@ -52,13 +52,21 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
             last_year = ds[variable]["time"][-1].dt.year.item()
             for doy, doy_indices in tqdm(doy_groups.items()):
                 # Check for existing output for this doy
-                out_nc_file = out_directory / f'{variable}_doy_mean_{doy}_{first_year}_{last_year}.nc'
-                if out_nc_file.is_file():
+                out_file = out_directory / f'{variable}_doy_mean_{doy:03}_{first_year}_{last_year}.nc'
+
+                # Rename to zero padded version of filename
+                # TODO: Remove
+                old_out_file = out_directory / f'{variable}_doy_mean_{doy}_{first_year}_{last_year}.nc'
+                if old_out_file.is_file() and not out_file.is_file():
+                    import shutil
+                    shutil.move(old_out_file, out_file)
+
+                if out_file.is_file():
                     if not overwrite:
-                        log.info(f'\nOutput for doy {doy} found at: {out_nc_file}. Skipping...')
+                        log.info(f'\nOutput for doy {doy} found at: {out_file}. Skipping...')
                         continue
                     else:
-                        out_nc_file.unlink(missing_ok=True)
+                        out_file.unlink(missing_ok=True)
 
                 # Start computation for current DOY
                 log.info(f'\nComputing DOY Mean for DOY {doy} for variable {variable}...')
@@ -95,8 +103,8 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
                 log.info(f'Out DataSet:\n'
                          f'{out_ds}')
 
-                log.info(f'Writing output: {out_nc_file}')
-                out_ds.to_netcdf(out_nc_file)
+                log.info(f'Writing output: {old_out_file}')
+                out_ds.to_netcdf(old_out_file)
                 log.info(f'Processing complete for {variable} for DOY {doy}.')
 
         # Log summary of failed processing
