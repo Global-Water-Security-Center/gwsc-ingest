@@ -54,13 +54,6 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
                 # Check for existing output for this doy
                 out_file = out_directory / f'{variable}_doy_mean_{doy:03}_{first_year}_{last_year}.nc'
 
-                # Rename to zero padded version of filename
-                # TODO: Remove
-                old_out_file = out_directory / f'{variable}_doy_mean_{doy}_{first_year}_{last_year}.nc'
-                if old_out_file.is_file() and not out_file.is_file():
-                    import shutil
-                    shutil.move(old_out_file, out_file)
-
                 if out_file.is_file():
                     if not overwrite:
                         log.info(f'\nOutput for doy {doy} found at: {out_file}. Skipping...')
@@ -103,8 +96,8 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
                 log.info(f'Out DataSet:\n'
                          f'{out_ds}')
 
-                log.info(f'Writing output: {old_out_file}')
-                out_ds.to_netcdf(old_out_file)
+                log.info(f'Writing output: {out_file}')
+                out_ds.to_netcdf(out_file)
                 log.info(f'Processing complete for {variable} for DOY {doy}.')
 
         # Log summary of failed processing
@@ -172,10 +165,8 @@ def _compute_doy_mean(variable, da, doy, doy_indices):
 
 if __name__ == '__main__':
     in_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021_by_time.zarr'
-    # in_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021.zarr'
     out_directory = r'E:\ERA5\era5_pnt_doy_mean_1950_2021'
-    # vars = ['mean_t2m_c', 'sum_tp_mm']
-    variables = ['mean_t2m_c']
+    variables = ['mean_t2m_c', 'sum_tp_mm']
     setup_basic_logging(logging.INFO)
     generate_normals_dataset(
         in_zarr=in_zarr,
