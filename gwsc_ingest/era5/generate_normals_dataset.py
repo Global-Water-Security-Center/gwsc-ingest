@@ -18,13 +18,21 @@ log = logging.getLogger(__name__)
 
 def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=False):
     """
-    Compute the day-of-year mean (DOY) / normal for given variables in the provided Zarr dataset.
+    Compute the normal (day-of-year (DOY) mean) for given variables in the provided Zarr dataset. Creates one
+        xarray Dataset for each DOY, with dimensions "time", "latitude", and "longitude" and coordinates "time",
+        "latitude", "longitude", "doy" with "doy" being a secondary coordinate for the "time" dimension. The "time"
+        dimension is populated with an arbitrary datetime datetime from the year 2000 associated with the DOY. This
+        makes the dataset easier to work with in systems that expect datetimes for a time-related dimension
+        (e.g. THREDDS).
 
     Args:
-        in_zarr:
-        out_directory:
-        variables:
-        overwrite:
+        in_zarr (str): Path or address to a Zarr dataset containing time-series gridded data with dimensions
+            "time", "latitude", and "longitude".
+        out_directory (str): Path to directory where output will be written.
+        variables (iterable): A list/tuple of variable names on which to compute day-of-year means. If not provided,
+            all variables that are not dimension or coordinate variables will be processed.
+        overwrite (bool): Overwrite existing output files if True. Defaults to False, skipping files/DOYs
+            that already exist.
 
     """
     out_directory = validate_directory(out_directory)
@@ -35,7 +43,8 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
 
         # Use all variable if not provided
         if not variables:
-            variables = [v for v in ds.variables if v not in ds.dims]
+            variables = [v for v in ds.variables if v not in ds.dims and v not in ds.coords]
+
         log.info(f'Computing day-of-year mean on the following variables: {" & ".join(variables)}')
 
         # Use first variable as template DataArray
@@ -45,36 +54,43 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
 
         # Create lookup array of dates to assign to each doy
         # THREDDS needs dates, so year 2000 chosen as an arbitrary leap year
-        # Prepend extra day to begining so lookup can be 1-indexed instead of zero-indexed
+        # Prepend extra day to beginning so lookup can be 1-indexed instead of zero-indexed
         datetime_for_ = pd.date_range(
             start=dt.datetime(year=1999, month=12, day=31),
             end=dt.datetime(year=2000, month=12, day=31),
             freq='D'
         ).to_list()
 
-        # Group data by day-of-year
-        doy_groups = template_da.groupby("time.dayofyear").groups
-
         # Track failed doy mean computations
         failed = {v: [] for v in variables}
-        for variable in variables:
-            for doy, doy_indices in tqdm(doy_groups.items()):
-                # Convert doy to date
-                doy_date = datetime_for_[doy]
-                # Check for existing output for this doy
-                filename_variable = 'temp' if 'temp' in variable else 'prcp'
-                out_file = out_directory / f'reanalysis-era5-normal-{filename_variable}-{doy_date:%Y-%m-%d}.nc'
-                out_file = out_directory / f'reanalysis-era5-normal-{variable.replace("_", "-")}-{doy_date:%Y-%m-%d}.nc'
+        first_year = ds["time"][0].dt.year.item()
+        last_year = ds["time"][-1].dt.year.item()
 
-                if out_file.is_file():
-                    if not overwrite:
-                        log.info(f'\nOutput for doy {doy} found at: {out_file}. Skipping...')
-                        continue
-                    else:
-                        out_file.unlink(missing_ok=True)
+        # Group data by day-of-year
+        doy_groups = template_da.groupby("time.dayofyear").groups
+        doy_group_indices = [(d, i) for d, i in doy_groups.items()]
 
+        for doy, doy_indices in tqdm(doy_group_indices):
+            # Get arbitrary date for given day-of-year
+            doy_date = datetime_for_[doy]
+
+            # Build up data_vars arg for dataset
+            data_vars = dict()
+
+            # Determine output file format
+            out_file = out_directory / \
+                       f'reanalysis-era5-normal-pnt-{first_year}-{last_year}-{doy_date:%Y-%m-%d}.nc'
+
+            if out_file.is_file():
+                if not overwrite:
+                    log.info(f'\nOutput for doy {doy} found at: {out_file}. Skipping...')
+                    continue
+                else:
+                    out_file.unlink(missing_ok=True)
+
+            for variable in variables:
                 # Start computation for current DOY
-                log.info(f'\nComputing DOY Mean for DOY {doy} for variable {variable}...')
+                log.info(f'\nComputing mean for DOY {doy} for variable {variable}...')
                 comp_start_time = dt.datetime.utcnow()
 
                 # Compute mean for the current doy for all variables in parallel
@@ -92,38 +108,50 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
                     continue
 
                 result_da = result['result']
-                log.info(f'DOY Mean Computation for {variable} for DOY {doy} took '
+                log.info(f'Mean computation for DOY {doy} for {variable} took '
                          f'{humanize.naturaldelta(dt.datetime.utcnow() - comp_start_time)}')
 
-                # Create dataset for writing
-                out_ds = xr.Dataset(
-                    data_vars={result_da.attrs['long_name']: result_da},
-                )
-                out_ds = out_ds.chunk(chunks={'doy': 1, 'latitude': len(lats), 'longitude': len(lons)})
-                log.info(f'Out DataSet:\n'
-                         f'{out_ds}')
+                data_vars.update({result_da.attrs['long_name']: result_da})
 
-                log.info(f'Writing output: {out_file}')
-                out_ds.to_netcdf(out_file)
-                log.info(f'Processing complete for {variable} for DOY {doy}.')
+            # Create dataset for writing - write one file for each DOY
+            out_ds = xr.Dataset(
+                data_vars=data_vars,
+            )
+            out_ds = out_ds.chunk(chunks={'time': 1, 'latitude': len(lats), 'longitude': len(lons)})
+            log.info(f'Out DataSet:\n'
+                     f'{out_ds}')
+
+            log.info(f'Writing output: {out_file}')
+            out_ds.to_netcdf(out_file)
+            log.info(f'Processing complete for {variable} for DOY {doy}.')
 
         # Log summary of failed processing
+        has_failures = False
         for variable, failed_doys in failed.items():
             if not failed_doys:
                 continue
+            has_failures = True
             log.warning(f'Processing failed for the following DOYs for {variable}: '
                         f'{" ".join(failed_doys)}')
+
+        if has_failures:
+            log.warning(f'Process completed with failures. Please re-run to correct failures and continue.')
+            exit(1)
 
 
 def _compute_doy_mean(variable, da, doy, doy_indices, doy_date):
     """
+    Compute the DOY mean on the given data array, using the given doy_indices to retrieve the values for the
+        given doy and complete the computation. This was originally split into a separate function so that the process
+        could be multi-processed. However, the calculation appears to be disk bound, meaning multi-processing won't
+        improve performance unless the input Zarr dataset is stored on a distributed data storage system.
 
     Args:
-        variable (str):
-        da (xr.DataArray):
-        doy (int):
-        doy_indices (dict): ?
-        doy_date :
+        variable (str): Name of the variable. Used to create the name of the output DataArray.
+        da (xr.DataArray): The xr.DataArray containing the dataset on which to compute the DOY mean.
+        doy (int):  Day of year to compute the mean.
+        doy_indices (list): Time indices of all times corresponding with the DOY.
+        doy_date (np.datetime): Datetime corresponding with the DOY.
 
     Returns:
         xr.DataArray or None:
@@ -140,12 +168,12 @@ def _compute_doy_mean(variable, da, doy, doy_indices, doy_date):
 
         # Coords
         times = np.array([doy_date])
-        doys = np.array([doy])
+        doys = np.array([np.int16(doy)])
         lats = da.latitude.data
         lons = da.longitude.data
 
         # Attrs
-        doy_mean_name = variable + '_doy_mean'
+        doy_mean_name = 'normal_' + variable
         attrs = copy.deepcopy(da.attrs)
         attrs['long_name'] = doy_mean_name
 
@@ -179,7 +207,7 @@ def _compute_doy_mean(variable, da, doy, doy_indices, doy_date):
 
 if __name__ == '__main__':
     in_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021_by_time.zarr'
-    out_directory = r'E:\ERA5\era5_pnt_doy_mean_1950_2021'
+    out_directory = r'E:\ERA5\era5_normal_pnt_1950_2021'
     variables = ['mean_t2m_c', 'sum_tp_mm']
     setup_basic_logging(logging.INFO)
     generate_normals_dataset(
