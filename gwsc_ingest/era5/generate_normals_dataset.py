@@ -5,6 +5,7 @@ import traceback
 
 import humanize
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 import xarray as xr
 
@@ -42,17 +43,28 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
         lats = template_da.latitude.data.copy()
         lons = template_da.longitude.data.copy()
 
+        # Create lookup array of dates to assign to each doy
+        # THREDDS needs dates, so year 2000 chosen as an arbitrary leap year
+        # Prepend extra day to begining so lookup can be 1-indexed instead of zero-indexed
+        datetime_for_ = pd.date_range(
+            start=dt.datetime(year=1999, month=12, day=31),
+            end=dt.datetime(year=2000, month=12, day=31),
+            freq='D'
+        ).to_list()
+
         # Group data by day-of-year
         doy_groups = template_da.groupby("time.dayofyear").groups
 
         # Track failed doy mean computations
         failed = {v: [] for v in variables}
         for variable in variables:
-            first_year = ds[variable]["time"][0].dt.year.item()
-            last_year = ds[variable]["time"][-1].dt.year.item()
             for doy, doy_indices in tqdm(doy_groups.items()):
+                # Convert doy to date
+                doy_date = datetime_for_[doy]
                 # Check for existing output for this doy
-                out_file = out_directory / f'{variable}_doy_mean_{doy:03}_{first_year}_{last_year}.nc'
+                filename_variable = 'temp' if 'temp' in variable else 'prcp'
+                out_file = out_directory / f'reanalysis-era5-normal-{filename_variable}-{doy_date:%Y-%m-%d}.nc'
+                out_file = out_directory / f'reanalysis-era5-normal-{variable.replace("_", "-")}-{doy_date:%Y-%m-%d}.nc'
 
                 if out_file.is_file():
                     if not overwrite:
@@ -66,7 +78,7 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
                 comp_start_time = dt.datetime.utcnow()
 
                 # Compute mean for the current doy for all variables in parallel
-                result = _compute_doy_mean(variable, ds[variable], doy, doy_indices)
+                result = _compute_doy_mean(variable, ds[variable], doy, doy_indices, doy_date)
 
                 if result['success'] is None:
                     log.info(f'An unexpected error occurred while processing {variable} for DOY {doy}')
@@ -86,11 +98,6 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
                 # Create dataset for writing
                 out_ds = xr.Dataset(
                     data_vars={result_da.attrs['long_name']: result_da},
-                    coords={
-                        'doy': np.array([doy]),
-                        'latitude': lats,
-                        'longitude': lons,
-                    },
                 )
                 out_ds = out_ds.chunk(chunks={'doy': 1, 'latitude': len(lats), 'longitude': len(lons)})
                 log.info(f'Out DataSet:\n'
@@ -108,7 +115,7 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
                         f'{" ".join(failed_doys)}')
 
 
-def _compute_doy_mean(variable, da, doy, doy_indices):
+def _compute_doy_mean(variable, da, doy, doy_indices, doy_date):
     """
 
     Args:
@@ -116,6 +123,7 @@ def _compute_doy_mean(variable, da, doy, doy_indices):
         da (xr.DataArray):
         doy (int):
         doy_indices (dict): ?
+        doy_date :
 
     Returns:
         xr.DataArray or None:
@@ -131,10 +139,10 @@ def _compute_doy_mean(variable, da, doy, doy_indices):
         mean_da = group_da.mean('time').compute()
 
         # Coords
+        times = np.array([doy_date])
         doys = np.array([doy])
         lats = da.latitude.data
         lons = da.longitude.data
-        coords = [('doy', doys), ('latitude', lats), ('longitude', lons)]
 
         # Attrs
         doy_mean_name = variable + '_doy_mean'
@@ -143,7 +151,13 @@ def _compute_doy_mean(variable, da, doy, doy_indices):
 
         mean_da_doy = xr.DataArray(
             np.array([mean_da.data]),
-            coords=coords,
+            coords={
+                'time': times,
+                'latitude': lats,
+                'longitude': lons,
+                'doy': ('time', doys),
+            },
+            dims=['time', 'latitude', 'longitude'],
             attrs=attrs
         )
 
