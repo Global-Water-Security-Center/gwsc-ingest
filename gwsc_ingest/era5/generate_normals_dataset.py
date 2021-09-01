@@ -63,8 +63,8 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
 
         # Track failed doy mean computations
         failed = {v: [] for v in variables}
-        ref_period_start = ds["time"][0].dt.strftime('%Y-%m-%d')
-        ref_period_end = ds["time"][-1].dt.strftime('%Y-%m-%d')
+        ref_period_start = ds["time"][0].dt.strftime('%Y-%m-%d').item()
+        ref_period_end = ds["time"][-1].dt.strftime('%Y-%m-%d').item()
 
         # Group data by day-of-year
         doy_groups = template_da.groupby("time.dayofyear").groups
@@ -216,7 +216,7 @@ def _compute_doy_mean(variable, da, doy, doy_indices, doy_date, ref_start, ref_e
 
 if __name__ == '__main__':
     in_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021_by_time.zarr'
-    out_directory = r'E:\ERA5\era5_normal_pnt_1950_2021'
+    out_directory = r'E:\ERA5\testing'
     variables = ['mean_t2m_c', 'sum_tp_mm']
     setup_basic_logging(logging.INFO)
     generate_normals_dataset(
