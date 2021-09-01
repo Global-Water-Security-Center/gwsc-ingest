@@ -63,8 +63,8 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
 
         # Track failed doy mean computations
         failed = {v: [] for v in variables}
-        ref_period_start = str(ds["time"][0].dt.date.item())
-        ref_period_end = str(ds["time"][-1].dt.date.item())
+        ref_period_start = ds["time"][0].dt.strftime('%Y-%m-%d')
+        ref_period_end = ds["time"][-1].dt.strftime('%Y-%m-%d')
 
         # Group data by day-of-year
         doy_groups = template_da.groupby("time.dayofyear").groups
@@ -117,6 +117,10 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
             # Create dataset for writing - write one file for each DOY
             out_ds = xr.Dataset(
                 data_vars=data_vars,
+                attrs={
+                    'reference_period_start': ref_period_start,
+                    'reference_period_end': ref_period_end,
+                }
             )
             out_ds = out_ds.chunk(chunks={'time': 1, 'latitude': len(lats), 'longitude': len(lons)})
             log.info(f'Out DataSet:\n'
