@@ -63,8 +63,8 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
 
         # Track failed doy mean computations
         failed = {v: [] for v in variables}
-        first_year = ds["time"][0].dt.year.item()
-        last_year = ds["time"][-1].dt.year.item()
+        ref_period_start = str(ds["time"][0].dt.date.item())
+        ref_period_end = str(ds["time"][-1].dt.date.item())
 
         # Group data by day-of-year
         doy_groups = template_da.groupby("time.dayofyear").groups
@@ -79,7 +79,7 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
 
             # Determine output file format
             out_file = out_directory / \
-                       f'reanalysis-era5-normal-pnt-{first_year}-{last_year}-{doy_date:%Y-%m-%d}.nc'
+                       f'reanalysis-era5-normal-pnt-{doy_date:%Y-%m-%d}.nc'
 
             if out_file.is_file():
                 if not overwrite:
@@ -94,7 +94,8 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
                 comp_start_time = dt.datetime.utcnow()
 
                 # Compute mean for the current doy for all variables in parallel
-                result = _compute_doy_mean(variable, ds[variable], doy, doy_indices, doy_date)
+                result = _compute_doy_mean(variable, ds[variable], doy, doy_indices, doy_date,
+                                           ref_period_start, ref_period_end)
 
                 if result['success'] is None:
                     log.info(f'An unexpected error occurred while processing {variable} for DOY {doy}')
@@ -139,7 +140,7 @@ def generate_normals_dataset(in_zarr, out_directory, variables=None, overwrite=F
             exit(1)
 
 
-def _compute_doy_mean(variable, da, doy, doy_indices, doy_date):
+def _compute_doy_mean(variable, da, doy, doy_indices, doy_date, ref_start, ref_end):
     """
     Compute the DOY mean on the given data array, using the given doy_indices to retrieve the values for the
         given doy and complete the computation. This was originally split into a separate function so that the process
@@ -152,6 +153,8 @@ def _compute_doy_mean(variable, da, doy, doy_indices, doy_date):
         doy (int):  Day of year to compute the mean.
         doy_indices (list): Time indices of all times corresponding with the DOY.
         doy_date (np.datetime): Datetime corresponding with the DOY.
+        ref_start (str): Datetime string of the start of the reference period.
+        ref_end (str): Datetime string of the end of the reference period.
 
     Returns:
         xr.DataArray or None:
@@ -176,6 +179,8 @@ def _compute_doy_mean(variable, da, doy, doy_indices, doy_date):
         doy_mean_name = 'normal_' + variable
         attrs = copy.deepcopy(da.attrs)
         attrs['long_name'] = doy_mean_name
+        attrs['reference_period_start'] = ref_start
+        attrs['reference_period_end'] = ref_end
 
         mean_da_doy = xr.DataArray(
             np.array([mean_da.data]),
