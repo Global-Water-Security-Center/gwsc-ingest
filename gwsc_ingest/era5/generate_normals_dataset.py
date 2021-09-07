@@ -222,7 +222,8 @@ if __name__ == '__main__':
                     'coordinates "time", "latitude", "longitude", "doy" where "doy" is a secondary coordinate for '
                     'the "time" dimension. The "time" dimension is populated with an arbitrary datetime from '
                     'the year 2000 associated with the DOY. This makes the dataset easier to work with in systems that '
-                    'expect datetimes for a time-related dimension (e.g. THREDDS).')
+                    'expect datetimes for a time-related dimension (e.g. THREDDS).'
+    )
     parser.add_argument("in_zarr",
                         help='Path or address to a Zarr dataset containing time-series gridded data with dimensions '
                              '"time", "latitude", and "longitude"')

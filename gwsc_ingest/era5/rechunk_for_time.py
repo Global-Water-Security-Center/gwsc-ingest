@@ -15,19 +15,21 @@ log = logging.getLogger(__name__)
 
 def rechunk_for_time(in_zarr, out_zarr, temp_zarr, max_memory):
     """
+    Rechunk a dataset such that all time steps for a given location in the grid are contained in a
+       single chunk to allow for more efficient time-series analysis.
 
     Args:
-        in_zarr:
-        out_zarr:
-        temp_zarr:
-
-    Returns:
-
+        in_zarr (str): Path or address to a Zarr dataset containing time-series gridded data with dimensions
+            "time", "latitude", and "longitude".
+        out_zarr (str): Path to address where output Zarr dataset will be written.
+        temp_zarr (str): Path to address where a temporary intermediate Zarr dataset will be written.
+        max_memory (str): Maximum in-memory size of chunk. Defaults to "100MB".
     """
     # Clean up
     out_zarr_path = Path(out_zarr)
     if out_zarr_path.is_dir():
         shutil.rmtree(out_zarr_path)
+
     temp_zarr_path = Path(temp_zarr)
     if temp_zarr_path.is_dir():
         shutil.rmtree(temp_zarr_path)
@@ -85,15 +87,26 @@ def rechunk_for_time(in_zarr, out_zarr, temp_zarr, max_memory):
 
 
 if __name__ == '__main__':
-    setup_basic_logging(logging.DEBUG)
-    # in_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021.zarr'
-    # out_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021_by_time.zarr'
-    # temp_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021_by_time-temp.zarr'
-    # max_memory = '500MB'
+    import argparse
 
-    rechunk_for_time(
-        in_zarr=in_zarr,
-        out_zarr=out_zarr,
-        temp_zarr=temp_zarr,
-        max_memory=max_memory,
+    parser = argparse.ArgumentParser(
+        description='Rechunk a dataset such that all time steps for a given location in the grid are contained in a '
+                    'single chunk to allow for more efficient time-series analysis.'
     )
+    parser.add_argument("in_zarr",
+                        help='Path or address to a Zarr dataset containing time-series gridded data with dimensions '
+                             '"time", "latitude", and "longitude".')
+    parser.add_argument("out_zarr",
+                        help="Path to address where output Zarr dataset will be written.")
+    parser.add_argument("temp_zarr",
+                        help="Path to address where a temporary intermediate Zarr dataset will be written.")
+    parser.add_argument("-m", "--max_memory", type=str, default="100MB",
+                        help='Maximum in-memory size of chunk. Defaults to "100MB".')
+    parser.add_argument("-d" "--debug", dest="debug", action='store_true',
+                        help="Turn on debug logging.")
+
+    args = parser.parse_args()
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    setup_basic_logging(log_level)
+    log.debug(f'Given arguments: {args}')
+    rechunk_for_time(args.in_zarr, args.out_zarr, args.temp_zarr, args.max_memory)

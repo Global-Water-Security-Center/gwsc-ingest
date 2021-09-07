@@ -47,10 +47,16 @@ Example usage:
 
 ```bash
 # Convert a directory of daily netcdf files into a zarr dataset with ~128 MB chunks
-python netcdf_to_zarr.py /data/era5_pnt_daily_2020 /data/era5_pnt_daily_2020.zarr -s 1.342e8
+python netcdf_to_zarr.py /data/era5_pnt_daily_2010_2020 /data/era5_pnt_daily_2010_2020.zarr -s 1.342e8
 ```
 
 ### rechunk_for_time.py
+
+Rechunk a dataset such that all time steps for a given location in the grid are contained in a single chunk to allow for more efficient time-series analysis. This script uses the [Rechunker](https://rechunker.readthedocs.io/en/latest/) library (see: [Rechunker: The missing link for chunked array analytics](https://medium.com/pangeo/rechunker-the-missing-link-for-chunked-array-analytics-5b2359e9dc11) for more details).
+
+```bash
+python rechunk_for_time.py /data/era5_pnt_daily_2010_2020.zarr /data/era5_pnt_daily_2010_2020_by_time.zarr /data/temp.zarr 500MB
+```
 
 ### generate_normals_dataset.py
 
