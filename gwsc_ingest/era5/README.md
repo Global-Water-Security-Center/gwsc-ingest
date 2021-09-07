@@ -54,6 +54,13 @@ python netcdf_to_zarr.py /data/era5_pnt_daily_2020 /data/era5_pnt_daily_2020.zar
 
 ### generate_normals_dataset.py
 
+Compute the normal (day-of-year (DOY) mean) for given variables in the provided Zarr dataset. Creates one xarray Dataset for each DOY, with dimensions "time", "latitude", and "longitude" and coordinates "time", "latitude", "longitude", "doy" with "doy" being a secondary coordinate for the "time" dimension. The "time" dimension is populated with an arbitrary datetime datetime from the year 2000 associated with the DOY. This makes the dataset easier to work with in systems that expect datetimes for a time-related dimension (e.g. THREDDS).
+
+```bash
+# Create normal (day-of-year mean) datasets (one for each day of the year) for all data contained in the zarr
+python generate_normals_dataset.py /data/era5_pnt_daily_2010_2020_by_time.zarr /data/era5_normal_pnt_2010_2020  -v mean_t2m_c sum_tp_mm
+```
+
 
 ## Workflows
 
