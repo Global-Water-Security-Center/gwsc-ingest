@@ -215,12 +215,30 @@ def _compute_doy_mean(variable, da, doy, doy_indices, doy_date, ref_start, ref_e
 
 
 if __name__ == '__main__':
-    in_zarr = r'E:\ERA5\era5_pnt_daily_1950_2021_by_time.zarr'
-    out_directory = r'E:\ERA5\testing'
-    variables = ['mean_t2m_c', 'sum_tp_mm']
-    setup_basic_logging(logging.INFO)
-    generate_normals_dataset(
-        in_zarr=in_zarr,
-        out_directory=out_directory,
-        variables=variables
-    )
+    import argparse
+    parser = argparse.ArgumentParser(
+        description='Compute the normal (day-of-year (DOY) mean) for given variables in the provided Zarr dataset. '
+                    'Creates one xarray Dataset for each DOY, with dimensions "time", "latitude", and "longitude" and '
+                    'coordinates "time", "latitude", "longitude", "doy" where "doy" is a secondary coordinate for '
+                    'the "time" dimension. The "time" dimension is populated with an arbitrary datetime from '
+                    'the year 2000 associated with the DOY. This makes the dataset easier to work with in systems that '
+                    'expect datetimes for a time-related dimension (e.g. THREDDS).')
+    parser.add_argument("in_zarr",
+                        help='Path or address to a Zarr dataset containing time-series gridded data with dimensions '
+                             '"time", "latitude", and "longitude"')
+    parser.add_argument("out_directory",
+                        help="Path to directory where output netcdf files will be written.")
+    parser.add_argument("-v", "--variables", nargs='+', default=None,
+                        help="One or more variable names on which to compute day-of-year means. If not provided, "
+                             "all variables that are not dimension or coordinate variables will be processed.")
+    parser.add_argument("-o", "--overwrite", action="store_true", default=False,
+                        help="Overwrite existing output files if True. Defaults to False, skipping files/DOYs "
+                             "that already exist.")
+    parser.add_argument("-d" "--debug", dest="debug", action='store_true',
+                        help="Turn on debug logging.")
+
+    args = parser.parse_args()
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    setup_basic_logging(log_level)
+    log.debug(f'Given arguments: {args}')
+    generate_normals_dataset(args.in_zarr, args.out_directory, args.variables, args.overwrite)
