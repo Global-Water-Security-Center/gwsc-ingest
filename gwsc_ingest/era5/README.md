@@ -64,7 +64,7 @@ Compute the normal (day-of-year (DOY) mean) for given variables in the provided 
 
 ```bash
 # Create normal (day-of-year mean) datasets (one for each day of the year) for all data contained in the zarr
-python generate_normals_dataset.py era5_pnt_daily_2010_2020_by_time.zarr era5_normal_pnt_2010_2020  -v mean_t2m_c sum_tp_mm
+python generate_normals_dataset.py era5_pnt_daily_2010_2020_time_chunks.zarr era5_normal_pnt_2010_2020  -v mean_t2m_c sum_tp_mm
 ```
 
 
