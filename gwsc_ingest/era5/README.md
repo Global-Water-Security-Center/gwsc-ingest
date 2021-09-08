@@ -1,6 +1,6 @@
 # ERA 5 Ingest Utilities
 
-This directory contains tools that are helpful for obtaining ERA 5 data and processing it for use in the Global Water Security Center apps and analyses.
+This directory contains tools that are helpful for obtaining ERA 5 data and processing it for use in the Global Water Security Center apps and analyses. Each module contains functions that can imported and scripted into custom workflows. Each module also contains a commandline interface allowing it to be called as a standalone script.
 
 ## Utility Scripts
 
@@ -55,7 +55,7 @@ python netcdf_to_zarr.py era5_pnt_daily_2010_2020 era5_pnt_daily_2010_2020.zarr 
 Rechunk a dataset such that all time steps for a given location in the grid are contained in a single chunk to allow for more efficient time-series analysis. This script uses the [Rechunker](https://rechunker.readthedocs.io/en/latest/) library (see: [Rechunker: The missing link for chunked array analytics](https://medium.com/pangeo/rechunker-the-missing-link-for-chunked-array-analytics-5b2359e9dc11) for more details).
 
 ```bash
-python rechunk_for_time.py era5_pnt_daily_2010_2020.zarr era5_pnt_daily_2010_2020_time_chunks.zarr temp.zarr 500MB
+python rechunk_for_time.py era5_pnt_daily_2010_2020.zarr era5_pnt_daily_2010_2020_time_chunks.zarr temp.zarr -m 500MB
 ```
 
 ### generate_normals_dataset.py
