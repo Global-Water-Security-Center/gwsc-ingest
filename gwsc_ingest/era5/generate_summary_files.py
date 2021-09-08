@@ -193,11 +193,14 @@ def add_time_dimension(data_array, time):
     return data_array
 
 
-if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser(description="Process a directory of ERA5 NetCDF files containing total "
-                                                 "precipitation (tp) and 2-meter temperature (t2m) data into "
-                                                 "summary files.")
+def _generate_summary_command(args):
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    setup_basic_logging(log_level)
+    log.debug(f'Given arguments: {args}')
+    bulk_generate_summary_files(args.in_directory, args.out_directory, args.processes)
+
+
+def _add_generate_summary_parser_arguments(parser):
     parser.add_argument("in_directory",
                         help="Path to directory containing ERA5 NetCDF files with tp and t2m variables.")
     parser.add_argument("out_directory",
@@ -207,9 +210,26 @@ if __name__ == '__main__':
 
     parser.add_argument("-d" "--debug", dest="debug", action='store_true',
                         help="Turn on debug logging.")
+    parser.set_defaults(func=_generate_summary_command)
 
+
+def _add_generate_summary_parser(subparsers):
+    p = subparsers.add_parser(
+        'era5-gen-daily-ds',
+        description="Process a directory of ERA5 NetCDF files containing total "
+                    "precipitation (tp) and 2-meter temperature (t2m) data into "
+                    "summary files."
+    )
+    _add_generate_summary_parser_arguments(p)
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Process a directory of ERA5 NetCDF files containing total "
+                    "precipitation (tp) and 2-meter temperature (t2m) data into "
+                    "summary files."
+    )
+    _add_generate_summary_parser_arguments(parser)
     args = parser.parse_args()
-    log_level = logging.DEBUG if args.debug else logging.INFO
-    setup_basic_logging(log_level)
-    log.debug(f'Given arguments: {args}')
-    bulk_generate_summary_files(args.in_directory, args.out_directory, args.processes)
+    args.func(args)

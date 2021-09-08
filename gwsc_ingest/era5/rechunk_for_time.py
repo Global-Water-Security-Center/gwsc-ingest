@@ -86,13 +86,14 @@ def rechunk_for_time(in_zarr, out_zarr, temp_zarr, max_memory):
         log.debug(f'Done. Execution took: {humanize.naturaldelta(compute_time)}')
 
 
-if __name__ == '__main__':
-    import argparse
+def _rechunk_for_time_command(args):
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    setup_basic_logging(log_level)
+    log.debug(f'Given arguments: {args}')
+    rechunk_for_time(args.in_zarr, args.out_zarr, args.temp_zarr, args.max_memory)
 
-    parser = argparse.ArgumentParser(
-        description='Rechunk a dataset such that all time steps for a given location in the grid are contained in a '
-                    'single chunk to allow for more efficient time-series analysis.'
-    )
+
+def _add_rechunk_for_time_arguments(parser):
     parser.add_argument("in_zarr",
                         help='Path or address to a Zarr dataset containing time-series gridded data with dimensions '
                              '"time", "latitude", and "longitude".')
@@ -104,9 +105,25 @@ if __name__ == '__main__':
                         help='Maximum in-memory size of chunk. Defaults to "100MB".')
     parser.add_argument("-d" "--debug", dest="debug", action='store_true',
                         help="Turn on debug logging.")
+    parser.set_defaults(func=_rechunk_for_time_command)
 
+
+def _add_rechunk_for_time_parser(subparsers):
+    p = subparsers.add_parser(
+        'era5-rechunk-for-time',
+        description='Rechunk a dataset such that all time steps for a given location in the grid are contained in a '
+                    'single chunk to allow for more efficient time-series analysis.'
+    )
+    _add_rechunk_for_time_arguments(p)
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(
+        description='Rechunk a dataset such that all time steps for a given location in the grid are contained in a '
+                    'single chunk to allow for more efficient time-series analysis.'
+    )
+    _add_rechunk_for_time_arguments(parser)
     args = parser.parse_args()
-    log_level = logging.DEBUG if args.debug else logging.INFO
-    setup_basic_logging(log_level)
-    log.debug(f'Given arguments: {args}')
-    rechunk_for_time(args.in_zarr, args.out_zarr, args.temp_zarr, args.max_memory)
+    args.func(args)
+

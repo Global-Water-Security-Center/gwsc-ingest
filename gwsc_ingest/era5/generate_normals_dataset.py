@@ -214,16 +214,14 @@ def _compute_doy_mean(variable, da, doy, doy_indices, doy_date, ref_start, ref_e
     return result
 
 
-if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser(
-        description='Compute the normal (day-of-year (DOY) mean) for given variables in the provided Zarr dataset. '
-                    'Creates one xarray Dataset for each DOY, with dimensions "time", "latitude", and "longitude" and '
-                    'coordinates "time", "latitude", "longitude", "doy" where "doy" is a secondary coordinate for '
-                    'the "time" dimension. The "time" dimension is populated with an arbitrary datetime from '
-                    'the year 2000 associated with the DOY. This makes the dataset easier to work with in systems that '
-                    'expect datetimes for a time-related dimension (e.g. THREDDS).'
-    )
+def _generate_normal_command(args):
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    setup_basic_logging(log_level)
+    log.debug(f'Given arguments: {args}')
+    generate_normals_dataset(args.in_zarr, args.out_directory, args.variables, args.overwrite)
+
+
+def _add_generate_normal_arguments(parser):
     parser.add_argument("in_zarr",
                         help='Path or address to a Zarr dataset containing time-series gridded data with dimensions '
                              '"time", "latitude", and "longitude"')
@@ -237,9 +235,32 @@ if __name__ == '__main__':
                              "that already exist.")
     parser.add_argument("-d" "--debug", dest="debug", action='store_true',
                         help="Turn on debug logging.")
+    parser.set_defaults(func=_generate_normal_command)
 
+
+def _add_generate_normal_parser(subparsers):
+    p = subparsers.add_parser(
+        'era5-gen-normal-ds',
+        description='Compute the normal (day-of-year (DOY) mean) for given variables in the provided Zarr dataset. '
+                    'Creates one xarray Dataset for each DOY, with dimensions "time", "latitude", and "longitude" and '
+                    'coordinates "time", "latitude", "longitude", "doy" where "doy" is a secondary coordinate for '
+                    'the "time" dimension. The "time" dimension is populated with an arbitrary datetime from '
+                    'the year 2000 associated with the DOY. This makes the dataset easier to work with in systems that '
+                    'expect datetimes for a time-related dimension (e.g. THREDDS).'
+    )
+    _add_generate_normal_arguments(p)
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(
+        description='Compute the normal (day-of-year (DOY) mean) for given variables in the provided Zarr dataset. '
+                    'Creates one xarray Dataset for each DOY, with dimensions "time", "latitude", and "longitude" and '
+                    'coordinates "time", "latitude", "longitude", "doy" where "doy" is a secondary coordinate for '
+                    'the "time" dimension. The "time" dimension is populated with an arbitrary datetime from '
+                    'the year 2000 associated with the DOY. This makes the dataset easier to work with in systems that '
+                    'expect datetimes for a time-related dimension (e.g. THREDDS).'
+    )
+    _add_generate_normal_arguments(parser)
     args = parser.parse_args()
-    log_level = logging.DEBUG if args.debug else logging.INFO
-    setup_basic_logging(log_level)
-    log.debug(f'Given arguments: {args}')
-    generate_normals_dataset(args.in_zarr, args.out_directory, args.variables, args.overwrite)
+    args.func(args)

@@ -82,22 +82,7 @@ def check_for_missing_files(dir_with_files, return_dates=False):
         return [dt.datetime.strptime(p.stem, date_format_str) for p in diff_files]
 
 
-if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Checks for missing files after a bulk download "
-                                                 "and verifies files are expected size.")
-    parser.add_argument("dir", help="Path to directory with files to verify.")
-    parser.add_argument("-d", "--download-missing", dest="download_missing", action='store_true',
-                        help="Download missing files.")
-    parser.add_argument("-p" "--processes", dest="processes", type=int, required=False, default=1,
-                        help="Number of concurrent processes to use to download the files.")
-    parser.add_argument("-k" "--key", dest="key", type=str, required=False, default=None,
-                        help="CDS API Key")
-    parser.add_argument("-d" "--debug", dest="debug", action='store_true',
-                        help="Turn on debug logging.")
-
-    args = parser.parse_args()
+def _verify_command(args):
     log_level = logging.DEBUG if args.debug else logging.INFO
     setup_basic_logging(log_level)
     log.debug(f'Given arguments: {args}')
@@ -107,3 +92,36 @@ if __name__ == '__main__':
         processes=args.processes,
         api_key=args.key,
     )
+
+
+def _add_verify_parser_arguments(parser):
+    parser.add_argument("dir", help="Path to directory with files to verify.")
+    parser.add_argument("-d", "--download-missing", dest="download_missing", action='store_true',
+                        help="Download missing files.")
+    parser.add_argument("-p" "--processes", dest="processes", type=int, required=False, default=1,
+                        help="Number of concurrent processes to use to download the files.")
+    parser.add_argument("-k" "--key", dest="key", type=str, required=False, default=None,
+                        help="CDS API Key")
+    parser.add_argument("-d" "--debug", dest="debug", action='store_true',
+                        help="Turn on debug logging.")
+    parser.set_defaults(func=_verify_command)
+
+
+def _add_verify_parser(subparsers):
+    p = subparsers.add_parser(
+        'era5-verify',
+        description="Checks for missing files after a bulk download "
+                    "and verifies files are expected size."
+    )
+    _add_verify_parser_arguments(p)
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Checks for missing files after a bulk download "
+                    "and verifies files are expected size."
+    )
+    _add_verify_parser_arguments(parser)
+    args = parser.parse_args()
+    args.func(args)

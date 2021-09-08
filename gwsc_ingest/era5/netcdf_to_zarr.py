@@ -74,13 +74,18 @@ def netcdf_to_zarr(in_directory, out_zarr, size_per_chunk=1.049e8):
             combined_ds.to_zarr(out_zarr, consolidated=True, append_dim='time')
 
 
-if __name__ == '__main__':
-    import argparse
+def _netcdf_to_zarr_command(args):
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    setup_basic_logging(log_level)
+    log.debug(f'Given arguments: {args}')
+    netcdf_to_zarr(
+        in_directory=args.in_directory,
+        out_zarr=args.out_zarr,
+        size_per_chunk=args.size_per_chunk
+    )
 
-    parser = argparse.ArgumentParser(description="Convert a directory of ERA5 NetCDF daily summary files into a "
-                                                 "single zarr dataset. Each file should contain a single day of "
-                                                 "data for the following variables: min_t2m_c, mean_t2m_c, "
-                                                 "max_t2m_c, and sum_tp_mm.")
+
+def _add_netcdf_to_zarr_arguments(parser):
     parser.add_argument("in_directory",
                         help="Path to directory containing ERA5 NetCDF daily summary files "
                              "(e.g.: '/data/pnt_daily_1950_2021_w_time').")
@@ -91,13 +96,29 @@ if __name__ == '__main__':
                         help="Target size per chunk in bytes. Defaults to 100 MB (1.049e8).")
     parser.add_argument("-d" "--debug", dest="debug", action='store_true',
                         help="Turn on debug logging.")
+    parser.set_defaults(func=_netcdf_to_zarr_command)
 
-    args = parser.parse_args()
-    log_level = logging.DEBUG if args.debug else logging.INFO
-    setup_basic_logging(log_level)
-    log.debug(f'Given arguments: {args}')
-    netcdf_to_zarr(
-        in_directory=args.in_directory,
-        out_zarr=args.out_zarr,
-        size_per_chunk=args.size_per_chunk
+
+def _add_netcdf_to_zarr_parser(subparsers):
+    p = subparsers.add_parser(
+        'era5-netcdf-to-zarr',
+        description="Convert a directory of ERA5 NetCDF daily summary files into a "
+                    "single zarr dataset. Each file should contain a single day of "
+                    "data for the following variables: min_t2m_c, mean_t2m_c, "
+                    "max_t2m_c, and sum_tp_mm."
     )
+    _add_netcdf_to_zarr_arguments(p)
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Convert a directory of ERA5 NetCDF daily summary files into a "
+                    "single zarr dataset. Each file should contain a single day of "
+                    "data for the following variables: min_t2m_c, mean_t2m_c, "
+                    "max_t2m_c, and sum_tp_mm."
+    )
+
+    _add_netcdf_to_zarr_arguments(parser)
+    args = parser.parse_args()
+    args.func(args)

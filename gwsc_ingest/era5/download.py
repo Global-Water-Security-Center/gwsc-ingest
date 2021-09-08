@@ -122,14 +122,23 @@ def download_one_day_ran_sfc(day, download_dir, download_format='netcdf', api_ke
     log.info(f'Download completed in {humanize.precisedelta(time_to_download)}')
 
 
-if __name__ == '__main__':
-    import argparse
+def _download_command(args):
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    setup_basic_logging(log_level)
+    log.debug(f'Given arguments: {args}')
+    last_day = args.last_day
+    days = [last_day - dt.timedelta(days=x) for x in range(args.num_days)]
+    bulk_download_one_day_ran_sfc(
+        days=days,
+        download_dir=args.download_dir,
+        processes=args.processes,
+        api_key=args.key,
+    )
 
+
+def _add_download_parser_arguments(parser):
     from gwsc_ingest.utils.validation import validate_date_string
 
-    parser = argparse.ArgumentParser(description="Downloads multiple 24 hour reanalysis-era5-single-levels "
-                                                 "(ran-sfc) datasets, one for each day in the given date "
-                                                 "range.")
     parser.add_argument("last_day", type=validate_date_string,
                         help="The last day of data to download in YYYY-MM-DD format.")
     parser.add_argument("num_days", type=int,
@@ -142,16 +151,24 @@ if __name__ == '__main__':
                         help="CDS API Key")
     parser.add_argument("-d" "--debug", dest="debug", action='store_true',
                         help="Turn on debug logging.")
+    parser.set_defaults(func=_download_command)
 
-    args = parser.parse_args()
-    log_level = logging.DEBUG if args.debug else logging.INFO
-    setup_basic_logging(log_level)
-    log.debug(f'Given arguments: {args}')
-    last_day = args.last_day
-    days = [last_day - dt.timedelta(days=x) for x in range(args.num_days)]
-    bulk_download_one_day_ran_sfc(
-        days=days,
-        download_dir=args.download_dir,
-        processes=args.processes,
-        api_key=args.key,
+
+def _add_download_parser(subparsers):
+    p = subparsers.add_parser(
+        'era5-download',
+        description="Downloads multiple 24 hour reanalysis-era5-single-levels (ran-sfc) "
+                    "datasets, one for each day in the given date range."
     )
+    _add_download_parser_arguments(p)
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Downloads multiple 24 hour reanalysis-era5-single-levels (ran-sfc) "
+                    "datasets, one for each day in the given date range."
+    )
+    _add_download_parser_arguments(parser)
+    args = parser.parse_args()
+    args.func(args)
