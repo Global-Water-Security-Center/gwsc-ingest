@@ -11,10 +11,13 @@ import xarray as xr
 from gwsc_ingest.utils.logging import setup_basic_logging
 from gwsc_ingest.utils.validation import validate_directory
 
+_COMMAND_DESCRIPTION = "Process a directory of ERA5 NetCDF files containing total " \
+                       "precipitation (tp) and 2-meter temperature (t2m) data into " \
+                       "daily summary dataset files."
 log = logging.getLogger(__name__)
 
 
-def bulk_generate_summary_files(in_directory, out_directory, processes=1):
+def bulk_generate_daily_datasets(in_directory, out_directory, processes=1):
     """
     Process a directory of ERA5 NetCDF files containing total precipitation (tp) and
         2-meter temperature (t2m) data into summary files.
@@ -62,13 +65,13 @@ def _worker(qwargs):
     Args:
         qwargs (dict): Keyword arguments of generate_summary_files.
     """
-    generate_summary_files(
+    generate_daily_datasets(
         in_filename=qwargs.get('in_filename'),
         out_filename=qwargs.get('out_filename'),
     )
 
 
-def generate_summary_files(in_filename, out_filename):
+def generate_daily_datasets(in_filename, out_filename):
     """
     Generate a summary file from an ERA5 NetCDF file containing total precipitation (tp) and 2-meter
         temperature (t2m) data. Summary file will contain the following variables: Minimum, Mean,
@@ -193,14 +196,14 @@ def add_time_dimension(data_array, time):
     return data_array
 
 
-def _generate_summary_command(args):
+def _generate_daily_command(args):
     log_level = logging.DEBUG if args.debug else logging.INFO
     setup_basic_logging(log_level)
     log.debug(f'Given arguments: {args}')
-    bulk_generate_summary_files(args.in_directory, args.out_directory, args.processes)
+    bulk_generate_daily_datasets(args.in_directory, args.out_directory, args.processes)
 
 
-def _add_generate_summary_parser_arguments(parser):
+def _add_generate_daily_parser_arguments(parser):
     parser.add_argument("in_directory",
                         help="Path to directory containing ERA5 NetCDF files with tp and t2m variables.")
     parser.add_argument("out_directory",
@@ -210,26 +213,17 @@ def _add_generate_summary_parser_arguments(parser):
 
     parser.add_argument("-d" "--debug", dest="debug", action='store_true',
                         help="Turn on debug logging.")
-    parser.set_defaults(func=_generate_summary_command)
+    parser.set_defaults(func=_generate_daily_command)
 
 
-def _add_generate_summary_parser(subparsers):
-    p = subparsers.add_parser(
-        'era5-gen-daily-ds',
-        description="Process a directory of ERA5 NetCDF files containing total "
-                    "precipitation (tp) and 2-meter temperature (t2m) data into "
-                    "summary files."
-    )
-    _add_generate_summary_parser_arguments(p)
+def _add_generate_daily_parser(subparsers):
+    p = subparsers.add_parser('era5-gen-daily-ds', description=_COMMAND_DESCRIPTION)
+    _add_generate_daily_parser_arguments(p)
 
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(
-        description="Process a directory of ERA5 NetCDF files containing total "
-                    "precipitation (tp) and 2-meter temperature (t2m) data into "
-                    "summary files."
-    )
-    _add_generate_summary_parser_arguments(parser)
+    parser = argparse.ArgumentParser(description=_COMMAND_DESCRIPTION)
+    _add_generate_daily_parser_arguments(parser)
     args = parser.parse_args()
     args.func(args)

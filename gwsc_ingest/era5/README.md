@@ -36,7 +36,7 @@ Example usage:
 
 ```bash
 # Process a directory of files, 24 at a time
-python generate_summary_files.py era5_pnt_hourly_2020 era5_pnt_daily_2020 -p 24
+python generate_daily_dataset.py era5_pnt_hourly_2020 era5_pnt_daily_2020 -p 24
 ```
 
 ### netcdf_to_zarr.py
