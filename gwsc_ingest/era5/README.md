@@ -14,7 +14,7 @@ Example usage:
 
 ```bash
 # Download 356 days of data data (2020-01-01 to 2021-01-01), up to 16 at a time
-python download.py 2021-01-01 365 /data/era5_pnt_hourly_2020 -k myCDSapiKEY -p 16
+python download.py 2021-01-01 365 era5_pnt_hourly_2020 -k myCDSapiKEY -p 16
 ```
 
 ### verify.py
@@ -25,7 +25,7 @@ Example usage:
 
 ```bash
 # Check for missing files and download (up to 16 at a time)
-python verify.py /data/era5_pnt_hourly_2020 -d -p 16
+python verify.py era5_pnt_hourly_2020 -d -p 16
 ```
 
 ### generate_summary_files.py
@@ -36,7 +36,7 @@ Example usage:
 
 ```bash
 # Process a directory of files, 24 at a time
-python generate_summary_files.py /data/era5_pnt_hourly_2020 /data/era5_pnt_daily_2020 -p 24
+python generate_summary_files.py era5_pnt_hourly_2020 era5_pnt_daily_2020 -p 24
 ```
 
 ### netcdf_to_zarr.py
@@ -46,8 +46,8 @@ Convert a directory of ERA5 NetCDF daily summary files into a single zarr datase
 Example usage:
 
 ```bash
-# Convert a directory of daily netcdf files into a zarr dataset with ~128 MB chunks
-python netcdf_to_zarr.py /data/era5_pnt_daily_2010_2020 /data/era5_pnt_daily_2010_2020.zarr -s 1.342e8
+# Convert a directory of daily netcdf files into a zarr dataset with ~150 MB chunks
+python netcdf_to_zarr.py era5_pnt_daily_2010_2020 era5_pnt_daily_2010_2020.zarr -s 134200000
 ```
 
 ### rechunk_for_time.py
@@ -55,7 +55,7 @@ python netcdf_to_zarr.py /data/era5_pnt_daily_2010_2020 /data/era5_pnt_daily_201
 Rechunk a dataset such that all time steps for a given location in the grid are contained in a single chunk to allow for more efficient time-series analysis. This script uses the [Rechunker](https://rechunker.readthedocs.io/en/latest/) library (see: [Rechunker: The missing link for chunked array analytics](https://medium.com/pangeo/rechunker-the-missing-link-for-chunked-array-analytics-5b2359e9dc11) for more details).
 
 ```bash
-python rechunk_for_time.py /data/era5_pnt_daily_2010_2020.zarr /data/era5_pnt_daily_2010_2020_by_time.zarr /data/temp.zarr 500MB
+python rechunk_for_time.py era5_pnt_daily_2010_2020.zarr era5_pnt_daily_2010_2020_time_chunks.zarr temp.zarr 500MB
 ```
 
 ### generate_normals_dataset.py
@@ -64,7 +64,7 @@ Compute the normal (day-of-year (DOY) mean) for given variables in the provided 
 
 ```bash
 # Create normal (day-of-year mean) datasets (one for each day of the year) for all data contained in the zarr
-python generate_normals_dataset.py /data/era5_pnt_daily_2010_2020_by_time.zarr /data/era5_normal_pnt_2010_2020  -v mean_t2m_c sum_tp_mm
+python generate_normals_dataset.py era5_pnt_daily_2010_2020_by_time.zarr era5_normal_pnt_2010_2020  -v mean_t2m_c sum_tp_mm
 ```
 
 
