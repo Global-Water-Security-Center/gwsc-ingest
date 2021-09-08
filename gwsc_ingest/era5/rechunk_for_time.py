@@ -10,6 +10,8 @@ import xarray as xr
 
 from gwsc_ingest.utils.logging import setup_basic_logging
 
+_COMMAND_DESCRIPTION = 'Rechunk a dataset such that all time steps for a given location in the grid are contained ' \
+                       'in a single chunk to allow for more efficient time-series analysis.'
 log = logging.getLogger(__name__)
 
 
@@ -109,20 +111,13 @@ def _add_rechunk_for_time_arguments(parser):
 
 
 def _add_rechunk_for_time_parser(subparsers):
-    p = subparsers.add_parser(
-        'era5-rechunk-for-time',
-        description='Rechunk a dataset such that all time steps for a given location in the grid are contained in a '
-                    'single chunk to allow for more efficient time-series analysis.'
-    )
+    p = subparsers.add_parser('era5-rechunk-for-time', description=_COMMAND_DESCRIPTION)
     _add_rechunk_for_time_arguments(p)
 
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(
-        description='Rechunk a dataset such that all time steps for a given location in the grid are contained in a '
-                    'single chunk to allow for more efficient time-series analysis.'
-    )
+    parser = argparse.ArgumentParser(description=_COMMAND_DESCRIPTION)
     _add_rechunk_for_time_arguments(parser)
     args = parser.parse_args()
     args.func(args)

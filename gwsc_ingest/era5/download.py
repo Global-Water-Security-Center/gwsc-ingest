@@ -8,6 +8,8 @@ import humanize
 from gwsc_ingest.utils.logging import setup_basic_logging
 from gwsc_ingest.utils.validation import validate_directory
 
+_COMMAND_DESCRIPTION = "Downloads multiple 24 hour reanalysis-era5-single-levels (ran-sfc) " \
+                       "datasets, one for each day in the given date range."
 log = logging.getLogger(__name__)
 
 
@@ -155,20 +157,13 @@ def _add_download_parser_arguments(parser):
 
 
 def _add_download_parser(subparsers):
-    p = subparsers.add_parser(
-        'era5-download',
-        description="Downloads multiple 24 hour reanalysis-era5-single-levels (ran-sfc) "
-                    "datasets, one for each day in the given date range."
-    )
+    p = subparsers.add_parser('era5-download', description=_COMMAND_DESCRIPTION)
     _add_download_parser_arguments(p)
 
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(
-        description="Downloads multiple 24 hour reanalysis-era5-single-levels (ran-sfc) "
-                    "datasets, one for each day in the given date range."
-    )
+    parser = argparse.ArgumentParser(description=_COMMAND_DESCRIPTION)
     _add_download_parser_arguments(parser)
     args = parser.parse_args()
     args.func(args)

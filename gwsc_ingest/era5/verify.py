@@ -5,6 +5,8 @@ from gwsc_ingest.era5.download import bulk_download_one_day_ran_sfc
 from gwsc_ingest.utils.logging import setup_basic_logging
 from gwsc_ingest.utils.validation import validate_directory
 
+_COMMAND_DESCRIPTION = "Checks for missing files after a bulk download " \
+                       "and verifies files are expected size."
 log = logging.getLogger(__name__)
 
 
@@ -108,20 +110,13 @@ def _add_verify_parser_arguments(parser):
 
 
 def _add_verify_parser(subparsers):
-    p = subparsers.add_parser(
-        'era5-verify',
-        description="Checks for missing files after a bulk download "
-                    "and verifies files are expected size."
-    )
+    p = subparsers.add_parser('era5-verify', description=_COMMAND_DESCRIPTION)
     _add_verify_parser_arguments(p)
 
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(
-        description="Checks for missing files after a bulk download "
-                    "and verifies files are expected size."
-    )
+    parser = argparse.ArgumentParser(description=_COMMAND_DESCRIPTION)
     _add_verify_parser_arguments(parser)
     args = parser.parse_args()
     args.func(args)

@@ -8,6 +8,10 @@ import xarray as xr
 from gwsc_ingest.utils.logging import setup_basic_logging
 from gwsc_ingest.utils.validation import validate_directory
 
+_COMMAND_DESCRIPTION = "Convert a directory of ERA5 NetCDF daily summary files into a " \
+                       "single zarr dataset. Each file should contain a single day of " \
+                       "data for the following variables: min_t2m_c, mean_t2m_c, " \
+                       "max_t2m_c, and sum_tp_mm."
 log = logging.getLogger(__name__)
 
 
@@ -100,25 +104,13 @@ def _add_netcdf_to_zarr_arguments(parser):
 
 
 def _add_netcdf_to_zarr_parser(subparsers):
-    p = subparsers.add_parser(
-        'era5-netcdf-to-zarr',
-        description="Convert a directory of ERA5 NetCDF daily summary files into a "
-                    "single zarr dataset. Each file should contain a single day of "
-                    "data for the following variables: min_t2m_c, mean_t2m_c, "
-                    "max_t2m_c, and sum_tp_mm."
-    )
+    p = subparsers.add_parser('era5-netcdf-to-zarr', description=_COMMAND_DESCRIPTION)
     _add_netcdf_to_zarr_arguments(p)
 
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(
-        description="Convert a directory of ERA5 NetCDF daily summary files into a "
-                    "single zarr dataset. Each file should contain a single day of "
-                    "data for the following variables: min_t2m_c, mean_t2m_c, "
-                    "max_t2m_c, and sum_tp_mm."
-    )
-
+    parser = argparse.ArgumentParser(description=_COMMAND_DESCRIPTION)
     _add_netcdf_to_zarr_arguments(parser)
     args = parser.parse_args()
     args.func(args)

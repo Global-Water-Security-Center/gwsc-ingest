@@ -12,7 +12,12 @@ import xarray as xr
 from gwsc_ingest.utils.logging import setup_basic_logging
 from gwsc_ingest.utils.validation import validate_directory
 
-
+_COMMAND_DESCRIPTION = 'Compute the normal (day-of-year (DOY) mean) for given variables in the provided Zarr ' \
+                       'dataset. Creates one xarray Dataset for each DOY, with dimensions "time", "latitude", and ' \
+                       '"longitude" and coordinates "time", "latitude", "longitude", "doy" where "doy" is a ' \
+                       'secondary coordinate for the "time" dimension. The "time" dimension is populated with an ' \
+                       'arbitrary datetime from the year 2000 associated with the DOY. This makes the dataset easier ' \
+                       'to work with in systems that expect datetimes for a time-related dimension (e.g. THREDDS).'
 log = logging.getLogger(__name__)
 
 
@@ -239,28 +244,13 @@ def _add_generate_normal_arguments(parser):
 
 
 def _add_generate_normal_parser(subparsers):
-    p = subparsers.add_parser(
-        'era5-gen-normal-ds',
-        description='Compute the normal (day-of-year (DOY) mean) for given variables in the provided Zarr dataset. '
-                    'Creates one xarray Dataset for each DOY, with dimensions "time", "latitude", and "longitude" and '
-                    'coordinates "time", "latitude", "longitude", "doy" where "doy" is a secondary coordinate for '
-                    'the "time" dimension. The "time" dimension is populated with an arbitrary datetime from '
-                    'the year 2000 associated with the DOY. This makes the dataset easier to work with in systems that '
-                    'expect datetimes for a time-related dimension (e.g. THREDDS).'
-    )
+    p = subparsers.add_parser('era5-gen-normal-ds', description=_COMMAND_DESCRIPTION)
     _add_generate_normal_arguments(p)
 
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(
-        description='Compute the normal (day-of-year (DOY) mean) for given variables in the provided Zarr dataset. '
-                    'Creates one xarray Dataset for each DOY, with dimensions "time", "latitude", and "longitude" and '
-                    'coordinates "time", "latitude", "longitude", "doy" where "doy" is a secondary coordinate for '
-                    'the "time" dimension. The "time" dimension is populated with an arbitrary datetime from '
-                    'the year 2000 associated with the DOY. This makes the dataset easier to work with in systems that '
-                    'expect datetimes for a time-related dimension (e.g. THREDDS).'
-    )
+    parser = argparse.ArgumentParser(description=_COMMAND_DESCRIPTION)
     _add_generate_normal_arguments(parser)
     args = parser.parse_args()
     args.func(args)
