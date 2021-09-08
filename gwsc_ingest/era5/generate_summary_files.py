@@ -103,6 +103,23 @@ def generate_summary_files(in_filename, out_filename):
 
     # Open file
     with xr.load_dataset(in_filename) as ds:
+        # Datasets with expver dimension have both ERA5 and ERA5T data
+        # ERA5 Data is assigned experiment version (expver) 1, while ERA5T expver is 5
+        # See: https://confluence.ecmwf.int/display/CUSF/ERA5+CDS+requests+which+return+a+mixture+of+ERA5+and+ERA5T+data
+        if 'expver' in ds.dims:
+            log.warning(f'\nDataset "{in_filename}" contains both ERA5 and ERA5T data. Resulting dataset will be '
+                        f'a combination of both. See: https://confluence.ecmwf.int/display/CUSF/'
+                        f'ERA5+CDS+requests+which+return+a+mixture+of+ERA5+and+ERA5T+data')
+
+            # Temperature is from expver 5 (ERA5T)
+            new_ds = ds.sel(expver=5)
+
+            # But the first 6 hours of precip are from expver 1 (ERA5)
+            precip_expver1 = ds.tp.sel(expver=1).isel(time=slice(None, 7))  # ERA5 portion
+            precip_expver5 = ds.tp.sel(expver=5).isel(time=slice(7, None))  # ERA5T portion
+            new_ds['tp'] = xr.concat([precip_expver1, precip_expver5], 'time')
+            ds = new_ds
+
         # Convert temperature from K to C
         ds['t2m_c'] = ds.t2m - 273.15
         ds['t2m_c'].attrs['long_name'] = ds.t2m.long_name.replace('metre', 'meter')
@@ -167,7 +184,7 @@ def add_time_dimension(data_array, time):
     data_array = xr.DataArray(
         np.array([data_array.data.copy()]),
         coords=[
-            ("time", np.array([time])),
+            ('time', np.array([time])),
             ('latitude', data_array.latitude.data.copy()),
             ('longitude', data_array.longitude.data.copy())
         ],
