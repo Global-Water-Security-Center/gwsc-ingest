@@ -150,7 +150,8 @@ def _add_download_parser_arguments(parser):
     parser.add_argument("-p" "--processes", dest="processes", type=int, required=False, default=1,
                         help="Number of concurrent processes to use to download the files.")
     parser.add_argument("-k" "--key", dest="key", type=str, required=False, default=None,
-                        help="CDS API Key")
+                        help="The CDS UID and API Key for authentication provided in the following "
+                             "format: <UID>:<API_KEY>.")
     parser.add_argument("-d" "--debug", dest="debug", action='store_true',
                         help="Turn on debug logging.")
     parser.set_defaults(func=_download_command)
