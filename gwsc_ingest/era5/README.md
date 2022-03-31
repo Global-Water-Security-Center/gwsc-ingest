@@ -14,8 +14,15 @@ Example usage:
 
 ```bash
 # Download 356 days of data data (2020-01-01 to 2021-01-01), up to 16 at a time
-gwsc era5-download 2021-01-01 365 era5_pnt_hourly_2020 -k myCDSapiKEY -p 16
+gwsc era5-download 2021-01-01 365 era5_pnt_hourly_2020 -k <UID>:<API_KEY> -p 16
 ```
+
+---
+**Note**
+
+Alternatively you can create a file named `.cdsapirc` in your user/home directory as described here: [How to use the CDS API](https://cds.climate.copernicus.eu/api-how-to#install-the-cds-api-key). The `-k` option can be omitted when using the `.cdsapirc` file.
+
+---
 
 ### verify.py
 
